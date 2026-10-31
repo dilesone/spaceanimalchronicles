@@ -7,204 +7,157 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Rubik+One&family=Montserrat:wght@300;600&family=Caveat:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Rubik+One&family=Montserrat:wght@300&family=Caveat:wght@400;700&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="menu.css">
 
 <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
-    html, body { width: 100%; height: 100%; overflow: hidden; background: #02040a; }
-
-    .scene { position: fixed; inset: 0; overflow: hidden; }
-
-    /* ═══════════════ ФОН ═══════════════ */
-    .bg-container { position: absolute; inset: -10%; pointer-events: none; z-index: 1; }
-    .sky {
-        position: absolute; inset: 0;
-        background: radial-gradient(ellipse at 50% 100%, #0a1020 0%, #02040a 70%),
-                    linear-gradient(180deg, #010206 0%, #030610 50%, #060a18 100%);
-    }
-    .stars { position: absolute; inset: 0; z-index: 3; }
-    .star { position: absolute; background: #fff; border-radius: 50%; animation: twinkle 3s ease-in-out infinite; }
-    @keyframes twinkle { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
-
-    .gradient-layer {
-        position: absolute; inset: 0; z-index: 5;
-        pointer-events: none; mix-blend-mode: screen;
-    }
-    .gradient-top, .gradient-bottom {
-        position: absolute; left: 0; right: 0; height: 50%;
-        opacity: 0.7; filter: blur(60px);
-    }
-    .gradient-top {
-        top: 0;
-        background: radial-gradient(ellipse at 50% 0%, rgba(50, 150, 255, 0.6) 0%, transparent 70%);
-    }
-    .gradient-bottom {
-        bottom: 0;
-        background: radial-gradient(ellipse at 50% 100%, rgba(40, 230, 200, 0.5) 0%, transparent 70%);
-    }
-
-    .vignette {
-        position: absolute; inset: 0; z-index: 20; pointer-events: none;
-        background: radial-gradient(ellipse at 50% 40%, transparent 20%, rgba(0,0,0,0.85) 100%);
-    }
-
-    /* ═══════════════ UI ═══════════════ */
-    .map-ui {
-        position: fixed; inset: 0; z-index: 30;
-        display: flex; flex-direction: column; align-items: center; justify-content: center;
-        padding: 5vh 2vw;
-        pointer-events: none;
-    }
-
-    .map-title {
+    .page-title {
         font-family: 'Rubik One', sans-serif;
-        font-size: clamp(28px, 4vw, 56px);
-        color: #f0f4ff;
-        letter-spacing: 0.1em;
-        margin-bottom: 5vh;
-        text-shadow: 0 0 30px rgba(168, 200, 255, 0.4), 0 4px 0 #1a1a3a;
+        font-size: clamp(28px, 4vw, 52px);
+        letter-spacing: 0.12em;
+        background: linear-gradient(135deg, #a8c8ff 0%, #88ffcc 100%);
+        -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+        filter: drop-shadow(0 0 30px rgba(100, 200, 255, 0.5));
+        text-align: center;
+        margin-bottom: 6vh;
         pointer-events: auto;
         animation: titlePop 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
-    @keyframes titlePop { 0% { opacity: 0; transform: scale(0.8); } 100% { opacity: 1; transform: scale(1); } }
+    @keyframes titlePop {
+        0%   { opacity: 0; transform: scale(0.8) translateY(-20px); }
+        100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
 
     .locations {
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 2vw;
-        max-width: 1200px;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 1.5vw;
+        max-width: 1300px;
         width: 100%;
         pointer-events: auto;
     }
 
     .loc {
         position: relative;
-        display: flex; flex-direction: column; align-items: center;
-        padding: 30px 20px;
-        background: linear-gradient(180deg, rgba(20, 25, 50, 0.85) 0%, rgba(10, 12, 25, 0.95) 100%);
-        border: 1px solid rgba(100, 150, 255, 0.25);
-        border-radius: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 24px 12px;
         cursor: pointer;
-        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-        backdrop-filter: blur(10px);
-        overflow: hidden;
+        text-decoration: none;
         opacity: 0;
-        animation: cardPop 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        animation: fadeUp 0.7s cubic-bezier(0.34, 1.3, 0.64, 1) forwards;
+        transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
-    .loc:nth-child(1) { animation-delay: 0.2s; }
-    .loc:nth-child(2) { animation-delay: 0.35s; }
-    .loc:nth-child(3) { animation-delay: 0.5s; }
-    .loc:nth-child(4) { animation-delay: 0.65s; }
-    @keyframes cardPop {
-        0% { opacity: 0; transform: translateY(30px) scale(0.9); }
-        100% { opacity: 1; transform: translateY(0) scale(1); }
-    }
+    .loc:nth-child(1) { animation-delay: 0.25s; }
+    .loc:nth-child(2) { animation-delay: 0.4s; }
+    .loc:nth-child(3) { animation-delay: 0.55s; }
+    .loc:nth-child(4) { animation-delay: 0.7s; }
+    .loc:nth-child(5) { animation-delay: 0.85s; }
+
+    .loc:hover { transform: translateY(-6px); }
 
     .loc::before {
         content: '';
-        position: absolute; inset: 0;
-        background: radial-gradient(circle at 50% 0%, rgba(100, 150, 255, 0.15) 0%, transparent 60%);
-        opacity: 0;
-        transition: opacity 0.3s;
+        position: absolute;
+        inset: -8px -10px;
         pointer-events: none;
+        opacity: 0;
+        transform: scale(0.85);
+        transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 70' preserveAspectRatio='none'><path d='M 120 8 C 60 4, 10 22, 12 40 C 14 58, 70 68, 120 64 C 180 60, 232 46, 228 30 C 224 14, 170 6, 110 12 C 80 16, 56 22, 50 30' fill='none' stroke='%23c8b8a8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+        background-repeat: no-repeat;
+        background-size: 100% 100%;
+        filter: drop-shadow(0 0 5px rgba(200, 184, 168, 0.5));
     }
-
-    .loc:hover {
-        transform: translateY(-6px);
-        border-color: rgba(168, 200, 255, 0.6);
-        box-shadow: 0 12px 40px rgba(100, 150, 255, 0.3), inset 0 1px 0 rgba(255,255,255,0.1);
-    }
-    .loc:hover::before { opacity: 1; }
-
-    .loc.locked {
-        cursor: not-allowed;
-        filter: grayscale(0.7);
-        opacity: 0.5 !important;
-    }
-    .loc.locked:hover {
-        transform: none;
-        border-color: rgba(100, 150, 255, 0.25);
-        box-shadow: none;
+    .loc:hover::before {
+        opacity: 1;
+        transform: scale(1);
     }
 
     .loc-icon {
-        font-size: clamp(48px, 6vw, 80px);
-        margin-bottom: 16px;
+        font-size: clamp(44px, 6vw, 76px);
+        margin-bottom: 12px;
         filter: drop-shadow(0 0 20px rgba(168, 200, 255, 0.4));
-        transition: transform 0.3s;
+        transition: transform 0.3s, filter 0.3s;
     }
-    .loc:hover .loc-icon { transform: scale(1.1) rotate(-3deg); }
+    .loc:hover .loc-icon {
+        transform: scale(1.1) rotate(-3deg);
+        filter: drop-shadow(0 0 30px rgba(168, 200, 255, 0.8));
+    }
 
     .loc-name {
         font-family: 'Caveat', cursive;
         font-weight: 700;
-        font-size: clamp(22px, 2.2vw, 32px);
-        color: #e8e0f0;
-        margin-bottom: 6px;
-        text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+        font-size: clamp(22px, 2.4vw, 34px);
+        color: #c8b8a8;
+        margin-bottom: 4px;
+        letter-spacing: 0.05em;
+        text-align: center;
+        text-shadow: 0 2px 5px rgba(0, 0, 0, 0.9), 0 0 15px rgba(0, 0, 0, 0.7);
+        transition: color 0.3s, text-shadow 0.3s;
+    }
+    .loc:hover .loc-name {
+        color: #fff5e0;
+        text-shadow: 0 0 20px rgba(168, 200, 255, 0.6), 0 2px 5px rgba(0, 0, 0, 0.9);
     }
 
     .loc-desc {
-        font-family: 'Montserrat', sans-serif;
-        font-size: clamp(10px, 1vw, 13px);
+        font-family: 'Caveat', cursive;
+        font-size: clamp(12px, 1.1vw, 16px);
         color: #8a9ac8;
         text-align: center;
-        letter-spacing: 0.05em;
-        line-height: 1.5;
+        letter-spacing: 0.03em;
+        line-height: 1.4;
+        transition: color 0.3s;
+    }
+    .loc:hover .loc-desc {
+        color: #a8c8ff;
     }
 
     .loc-lock {
         position: absolute;
-        top: 14px; right: 14px;
-        font-size: 22px;
-        opacity: 0.8;
+        top: 6px;
+        right: 10px;
+        font-size: 20px;
+        opacity: 0.6;
     }
 
-    .loc-progress {
+    .loc.locked {
+        cursor: not-allowed;
+        filter: grayscale(0.8);
+        opacity: 0.35 !important;
+    }
+    .loc.locked:hover { transform: none; }
+    .loc.locked:hover::before { opacity: 0; }
+
+    .loc.completed .loc-icon {
+        filter: drop-shadow(0 0 25px rgba(100, 255, 200, 0.8));
+    }
+    .loc.completed::after {
+        content: '✓';
         position: absolute;
-        bottom: 0; left: 0; right: 0;
-        height: 4px;
-        background: rgba(255, 255, 255, 0.05);
-    }
-    .loc-progress-fill {
-        height: 100%;
-        background: linear-gradient(90deg, #4a8ad8, #a8c8ff);
-        width: 0%;
-        transition: width 0.5s ease;
-        box-shadow: 0 0 10px rgba(168, 200, 255, 0.6);
+        top: 6px;
+        right: 10px;
+        font-size: 22px;
+        color: #88ffcc;
+        font-weight: bold;
+        text-shadow: 0 0 10px rgba(100, 255, 200, 0.8);
     }
 
-    /* ═══════════════ Кнопка назад ═══════════════ */
-    .back-btn {
-        position: fixed; top: 24px; left: 24px; z-index: 100;
-        padding: 10px 20px;
-        font-family: 'Caveat', cursive; font-weight: 700; font-size: 22px;
-        color: #c8b8a8; background: rgba(10, 10, 20, 0.6);
-        border: 1px solid rgba(200, 184, 168, 0.3);
-        border-radius: 10px; cursor: pointer;
-        backdrop-filter: blur(10px);
-        transition: all 0.2s;
+    .loc.random .loc-icon {
+        filter: drop-shadow(0 0 25px rgba(100, 255, 200, 0.6));
     }
-    .back-btn:hover {
-        color: #fff5e0;
-        border-color: rgba(255, 245, 224, 0.6);
-        background: rgba(10, 10, 20, 0.85);
+    .loc.random .loc-name {
+        background: linear-gradient(135deg, #a8c8ff 0%, #88ffcc 100%);
+        -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
     }
 
-    /* ═══════════════ Индикатор выбора ═══════════════ */
-    .hint-bottom {
-        position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-        font-family: 'Montserrat', sans-serif;
-        font-size: 13px;
-        color: #8a9ac8;
-        letter-spacing: 0.1em;
-        text-transform: uppercase;
-        z-index: 100;
-        pointer-events: none;
-        opacity: 0.7;
+    @media (max-width: 1100px) {
+        .locations { grid-template-columns: repeat(3, 1fr); }
     }
-
-    @media (max-width: 900px) {
+    @media (max-width: 700px) {
         .locations { grid-template-columns: repeat(2, 1fr); }
     }
 </style>
@@ -213,8 +166,9 @@
 
 <div class="scene">
     <div class="bg-container">
-        <div class="sky"></div>
-        <div class="stars" id="stars"></div>
+        <div class="sky parallax-layer" data-speed="0"></div>
+        <div class="stars parallax-layer" id="stars" data-speed="0.1"></div>
+        <div class="planet-far parallax-layer" data-speed="0.15"></div>
     </div>
 
     <div class="gradient-layer">
@@ -222,129 +176,136 @@
         <div class="gradient-bottom"></div>
     </div>
 
+    <div class="comet-container" id="comet-container"></div>
     <div class="vignette"></div>
 
-    <button class="back-btn" onclick="location.href='index.html'">← В меню</button>
+    <a href="index.html" class="back-btn">← В меню</a>
 
-    <div class="map-ui">
-        <h1 class="map-title">Карта мира</h1>
-
-        <div class="locations" id="locations">
-            <!-- Локации генерируются в JS -->
-        </div>
+    <div class="ui-center-group">
+        <h1 class="page-title">КАРТА МИРА</h1>
+        <div class="locations" id="locations"></div>
     </div>
 
-    <div class="hint-bottom">Выбери локацию для высадки</div>
+    <div class="footer">v0.3 alpha <span>•</span> forest edition</div>
 </div>
 
+<script src="menu.js"></script>
 <script>
-    // ═══════════════ ЗВЁЗДЫ ═══════════════
-    const starsContainer = document.getElementById('stars');
-    for (let i = 0; i < 300; i++) {
-        const s = document.createElement('div');
-        s.className = 'star';
-        const size = Math.random() * 2.4 + 0.4;
-        s.style.width = size + 'px';
-        s.style.height = size + 'px';
-        s.style.left = Math.random() * 100 + '%';
-        s.style.top = Math.random() * 100 + '%';
-        s.style.animationDelay = (Math.random() * 3) + 's';
-        s.style.animationDuration = (2 + Math.random() * 4) + 's';
-        s.style.background = Math.random() < 0.2 ? '#a8c8ff' : (Math.random() < 0.1 ? '#d0e0ff' : '#fff');
-        s.style.boxShadow = `0 0 ${size * 2.5}px rgba(255,255,255,0.7)`;
-        starsContainer.appendChild(s);
-    }
+    (() => {
+        // Данные о локациях
+        const LOCATIONS = [
+            {
+                key: 'forest',
+                name: 'Лес',
+                icon: '🌲',
+                desc: 'Зелёная чаща<br>с ягодами и кристаллами',
+                theme: 'forest',
+                type: 'fixed',
+                unlockAfter: null // доступно сразу
+            },
+            {
+                key: 'desert',
+                name: 'Пустыня',
+                icon: '🏜️',
+                desc: 'Бескрайние пески<br>и жаркое солнце',
+                theme: 'desert',
+                type: 'fixed',
+                unlockAfter: 'forest' // открывается после леса
+            },
+            {
+                key: 'mountains',
+                name: 'Горы',
+                icon: '⛰️',
+                desc: 'Снежные вершины<br>и головокружительные обрывы',
+                theme: 'mountains',
+                type: 'fixed',
+                unlockAfter: 'desert' // открывается после пустыни
+            },
+            {
+                key: 'dungeon',
+                name: 'Подземелья',
+                icon: '🕳️',
+                desc: 'Тёмные пещеры<br>и забытые сокровища',
+                theme: 'dungeon',
+                type: 'fixed',
+                unlockAfter: 'mountains' // открывается после гор
+            },
+            {
+                key: 'random',
+                name: 'Случайный мир',
+                icon: '🎲',
+                desc: 'Новый уровень<br>каждый раз',
+                type: 'random',
+                isRandom: true
+            }
+        ];
 
-    // ═══════════════ ДАННЫЕ ЛОКАЦИЙ ═══════════════
-    const LOCATIONS = [
-        {
-            key: 'forest',
-            name: 'Лес',
-            icon: '🌲',
-            desc: 'Зелёная чаща<br>с ягодами и кристаллами',
-            unlocked: true,
-            href: 'game.html',
-            progress: 0   // 0..100
-        },
-        {
-            key: 'desert',
-            name: 'Пустыня',
-            icon: '🏜️',
-            desc: 'Бескрайние пески<br>и жаркое солнце',
-            unlocked: false
-        },
-        {
-            key: 'mountains',
-            name: 'Горы',
-            icon: '⛰️',
-            desc: 'Снежные вершины<br>и головокружительные обрывы',
-            unlocked: false
-        },
-        {
-            key: 'dungeons',
-            name: 'Подземелья',
-            icon: '🕳️',
-            desc: 'Тёмные пещеры<br>и забытые сокровища',
-            unlocked: false
-        }
-    ];
-
-    // ═══════════════ РЕНДЕР КАРТОЧЕК ═══════════════
-    const container = document.getElementById('locations');
-
-    LOCATIONS.forEach(loc => {
-        const el = document.createElement('div');
-        el.className = 'loc' + (loc.unlocked ? '' : ' locked');
-        el.innerHTML = `
-            ${!loc.unlocked ? '<div class="loc-lock">🔒</div>' : ''}
-            <div class="loc-icon">${loc.icon}</div>
-            <div class="loc-name">${loc.name}</div>
-            <div class="loc-desc">${loc.desc}</div>
-            ${loc.unlocked ? `<div class="loc-progress"><div class="loc-progress-fill" style="width:${loc.progress || 0}%"></div></div>` : ''}
-        `;
-
-        if (loc.unlocked) {
-            el.addEventListener('click', () => {
-                // Небольшая анимация «ухода в локацию»
-                el.style.transition = 'all 0.3s';
-                el.style.transform = 'scale(0.95)';
-                el.style.opacity = '0.6';
-
-                setTimeout(() => {
-                    window.location.href = loc.href;
-                }, 200);
-            });
-        }
-
-        container.appendChild(el);
-    });
-
-    // ═══════════════ ЗВУК КЛИКА (опционально) ═══════════════
-    let audioCtx = null;
-    document.addEventListener('click', () => {
-        if (!audioCtx) {
+        // Загружаем прогресс
+        function loadProgress() {
             try {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            } catch (e) {}
+                const saved = JSON.parse(localStorage.getItem('kz_progress') || '{}');
+                return saved;
+            } catch (e) { return {}; }
         }
-    }, { once: true });
 
-    container.addEventListener('click', (e) => {
-        const card = e.target.closest('.loc');
-        if (!card || card.classList.contains('locked')) return;
-        if (!audioCtx) return;
-        try {
-            const o = audioCtx.createOscillator();
-            const g = audioCtx.createGain();
-            o.frequency.value = 660;
-            o.type = 'sine';
-            g.gain.value = 0.05;
-            o.connect(g); g.connect(audioCtx.destination);
-            o.start();
-            g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.15);
-            o.stop(audioCtx.currentTime + 0.15);
-        } catch (e) {}
-    });
+        // Проверяем, разблокирована ли локация
+        function isUnlocked(loc, progress) {
+            if (loc.isRandom) return true; // случайный мир всегда доступен
+            if (loc.unlockAfter === null) return true; // лес всегда доступен
+            // Разблокировано, если пройдена предыдущая локация
+            return progress[loc.unlockAfter] === true;
+        }
+
+        const container = document.getElementById('locations');
+        const progress = loadProgress();
+
+        LOCATIONS.forEach(loc => {
+            const unlocked = isUnlocked(loc, progress);
+            const completed = !loc.isRandom && progress[loc.key] === true;
+
+            const el = document.createElement('div');
+            el.className = 'loc'
+                + (unlocked ? '' : ' locked')
+                + (loc.isRandom ? ' random' : '')
+                + (completed ? ' completed' : '');
+
+            el.innerHTML = `
+                ${!unlocked ? '<div class="loc-lock">🔒</div>' : ''}
+                <div class="loc-icon">${loc.icon}</div>
+                <div class="loc-name">${loc.name}</div>
+                <div class="loc-desc">${loc.desc}</div>
+            `;
+
+            if (unlocked) {
+                el.addEventListener('click', () => {
+                    el.style.transition = 'all 0.25s';
+                    el.style.transform = 'scale(0.95)';
+                    el.style.opacity = '0.6';
+
+                    if (loc.type === 'fixed') {
+                        // Фиксированная локация (лес, пустыня, горы, подземелья)
+                        localStorage.setItem('kz_play_mode', 'fixed');
+                        localStorage.setItem('kz_play_key', loc.key);
+                        localStorage.setItem('kz_play_theme', loc.theme);
+                        localStorage.removeItem('kz_random_seed');
+                        localStorage.removeItem('kz_editor_level');
+                    } else if (loc.type === 'random') {
+                        // Случайный мир
+                        const seed = Math.floor(Math.random() * 1e9);
+                        localStorage.setItem('kz_random_seed', String(seed));
+                        localStorage.setItem('kz_play_mode', 'random');
+                        localStorage.removeItem('kz_editor_level');
+                    }
+
+                    setTimeout(() => {
+                        window.location.href = 'game.html';
+                    }, 200);
+                });
+            }
+
+            container.appendChild(el);
+        });
+    })();
 </script>
 
 </body>

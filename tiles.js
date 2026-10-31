@@ -8,29 +8,16 @@
         for (let i = 0; i < count; i++) {
             const a = Math.random() * Math.PI * 2;
             const s = Math.random() * speed + 1;
-            particles.push({
-                x, y,
-                vx: Math.cos(a) * s,
-                vy: Math.sin(a) * s - 1,
-                life: 1,
-                color,
-                size: Math.random() * 4 + 2
-            });
+            particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 1, life: 1, color, size: Math.random() * 4 + 2 });
         }
     }
-
     function updateParticles() {
         for (let i = particles.length - 1; i >= 0; i--) {
             const p = particles[i];
-            p.x += p.vx;
-            p.y += p.vy;
-            p.vy += 0.15;
-            p.vx *= 0.96;
-            p.life -= 0.025;
+            p.x += p.vx; p.y += p.vy; p.vy += 0.15; p.vx *= 0.96; p.life -= 0.025;
             if (p.life <= 0) particles.splice(i, 1);
         }
     }
-
     function drawParticles(ctx) {
         for (const p of particles) {
             ctx.globalAlpha = p.life;
@@ -42,12 +29,11 @@
         ctx.globalAlpha = 1;
     }
 
-    // ─── Звёзды фона ──────────────────────────────────────
+    // ─── Звёзды ───────────────────────────────────────────
     const stars = [];
     for (let i = 0; i < 400; i++) {
         stars.push({
-            x: Math.random(),
-            y: Math.random(),
+            x: Math.random(), y: Math.random(),
             size: Math.random() * 2.4 + 0.4,
             speed: 0.1 + Math.random() * 0.25,
             twinkle: Math.random() * 10,
@@ -55,43 +41,65 @@
         });
     }
 
-    // ─── Палитры для тем ──────────────────────────────────
+    // ═══════════════ ПАЛИТРЫ ДЛЯ 4 ТЕМ ═══════════════
     const THEMES = {
         forest: {
             wall: '#3a2a1a', wallDark: '#2a1a0a',
             grass: '#2a5a2a', grassLight: '#3a8a3a',
             platform: '#7acc4a', platformDark: '#2d5a2d',
             water: 'rgba(60, 140, 180, 0.7)',
-            spike: '#c84a4a'
+            spike: '#c84a4a',
+            bgTop: '#010206', bgBot: '#060a18',
+            skyGlow: 'rgba(50, 150, 255, 0.15)'
         },
         desert: {
-            wall: '#8a6a3a', wallDark: '#5a3a1a',
-            grass: '#c8a860', grassLight: '#e0c080',
-            platform: '#d4a060', platformDark: '#6a4a2a',
+            wall: '#a07a4a', wallDark: '#6a4a2a',
+            grass: '#d4a060', grassLight: '#f0c080',
+            platform: '#e8c070', platformDark: '#8a6030',
             water: 'rgba(80, 180, 220, 0.7)',
-            spike: '#c84a4a'
+            spike: '#d97a3a',
+            bgTop: '#1a0a05', bgBot: '#3a1a0a',
+            skyGlow: 'rgba(255, 180, 80, 0.15)'
         },
         mountains: {
             wall: '#5a6a7a', wallDark: '#3a4a5a',
-            grass: '#8a9aaa', grassLight: '#b8c8d8',
-            platform: '#8a9aaa', platformDark: '#3a4a5a',
+            grass: '#8a9aaa', grassLight: '#c8d8e8',
+            platform: '#a0b0c0', platformDark: '#4a5a6a',
             water: 'rgba(140, 200, 240, 0.7)',
-            spike: '#cc5555'
+            spike: '#cc5555',
+            bgTop: '#010408', bgBot: '#0a1420',
+            skyGlow: 'rgba(150, 200, 255, 0.2)'
         },
         dungeon: {
             wall: '#2a1a3a', wallDark: '#1a0a2a',
-            grass: '#4a2a5a', grassLight: '#6a3a7a',
-            platform: '#5a3a7a', platformDark: '#2a1a3a',
+            grass: '#4a2a5a', grassLight: '#7a4a8a',
+            platform: '#6a3a7a', platformDark: '#2a1a3a',
             water: 'rgba(80, 40, 120, 0.7)',
-            spike: '#cc88ff'
+            spike: '#cc88ff',
+            bgTop: '#050210', bgBot: '#0a0520',
+            skyGlow: 'rgba(150, 80, 255, 0.15)'
         }
     };
 
+    // Усиленная проверка темы
     function getTheme() {
-        return THEMES[Level.state.theme] || THEMES.forest;
+        let themeName = 'forest';
+        
+        // Пробуем взять из Level.state.theme
+        if (typeof Level !== 'undefined' && Level.state && Level.state.theme) {
+            themeName = Level.state.theme;
+        }
+        
+        // Если такой темы нет в THEMES — fallback на forest
+        if (!THEMES[themeName]) {
+            console.warn('Unknown theme:', themeName, '- using forest');
+            themeName = 'forest';
+        }
+        
+        return THEMES[themeName];
     }
 
-    // ─── Тайлы ────────────────────────────────────────────
+    // ═══════════════ ТАЙЛЫ ═══════════════
     function drawWall(ctx, x, y, T, theme, showGrass) {
         ctx.fillStyle = theme.wall;
         ctx.fillRect(x, y, T, T);
@@ -143,30 +151,18 @@
         glow.addColorStop(0, 'rgba(255, 100, 150, 0.5)');
         glow.addColorStop(1, 'rgba(255, 100, 150, 0)');
         ctx.fillStyle = glow;
-        ctx.beginPath();
-        ctx.arc(cx, cy, 22, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.beginPath(); ctx.arc(cx, cy, 22, 0, Math.PI * 2); ctx.fill();
 
         ctx.fillStyle = '#e8305a';
-        ctx.beginPath();
-        ctx.arc(cx, cy + 2, 10, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(cx - 6, cy - 2, 6, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(cx + 6, cy - 2, 6, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.beginPath(); ctx.arc(cx, cy + 2, 10, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(cx - 6, cy - 2, 6, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(cx + 6, cy - 2, 6, 0, Math.PI * 2); ctx.fill();
 
         ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-        ctx.beginPath();
-        ctx.arc(cx - 4, cy - 2, 2.5, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.beginPath(); ctx.arc(cx - 4, cy - 2, 2.5, 0, Math.PI * 2); ctx.fill();
 
         ctx.fillStyle = '#2a8a2a';
-        ctx.beginPath();
-        ctx.ellipse(cx, cy - 10, 5, 3, -0.3, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.beginPath(); ctx.ellipse(cx, cy - 10, 5, 3, -0.3, 0, Math.PI * 2); ctx.fill();
     }
 
     function drawCrystal(ctx, x, y, T, gx, gy) {
@@ -178,9 +174,7 @@
         glow.addColorStop(0, 'rgba(168, 220, 255, 0.7)');
         glow.addColorStop(1, 'rgba(168, 220, 255, 0)');
         ctx.fillStyle = glow;
-        ctx.beginPath();
-        ctx.arc(cx, cy, 28, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.beginPath(); ctx.arc(cx, cy, 28, 0, Math.PI * 2); ctx.fill();
 
         ctx.fillStyle = '#a8d8ff';
         ctx.beginPath();
@@ -231,19 +225,13 @@
         glow.addColorStop(0, 'rgba(255, 200, 100, 0.6)');
         glow.addColorStop(1, 'rgba(255, 200, 100, 0)');
         ctx.fillStyle = glow;
-        ctx.beginPath();
-        ctx.arc(cx, cy, 30, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.beginPath(); ctx.arc(cx, cy, 30, 0, Math.PI * 2); ctx.fill();
 
         ctx.fillStyle = '#8b5a2b';
-        ctx.beginPath();
-        ctx.ellipse(cx, cy + 3, 12, 11, 0, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.beginPath(); ctx.ellipse(cx, cy + 3, 12, 11, 0, 0, Math.PI * 2); ctx.fill();
 
         ctx.fillStyle = '#5a3a1b';
-        ctx.beginPath();
-        ctx.ellipse(cx, cy - 8, 12, 4, 0, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.beginPath(); ctx.ellipse(cx, cy - 8, 12, 4, 0, 0, Math.PI * 2); ctx.fill();
 
         ctx.strokeStyle = 'rgba(60, 30, 10, 0.5)';
         ctx.lineWidth = 1;
@@ -254,9 +242,7 @@
         }
 
         ctx.fillStyle = 'rgba(255, 220, 180, 0.7)';
-        ctx.beginPath();
-        ctx.ellipse(cx - 4, cy - 2, 3, 4, -0.5, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.beginPath(); ctx.ellipse(cx - 4, cy - 2, 3, 4, -0.5, 0, Math.PI * 2); ctx.fill();
 
         const now = performance.now() * 0.003;
         const pulse = Math.sin(now) * 0.5 + 0.5;
@@ -327,9 +313,7 @@
             glow.addColorStop(1, 'rgba(100, 100, 120, 0)');
         }
         ctx.fillStyle = glow;
-        ctx.beginPath();
-        ctx.arc(cx, cy, glowRadius, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.beginPath(); ctx.arc(cx, cy, glowRadius, 0, Math.PI * 2); ctx.fill();
 
         const pulse = isOpen ? 1 + Math.sin(now * 2) * 0.05 : 1;
         ctx.save();
@@ -383,7 +367,6 @@
         }
     }
 
-    // ─── Отрисовка уровня ─────────────────────────────────
     function drawLevel(ctx, camX, camY, viewW, viewH) {
         const T = Level.tileSize;
         const W = Level.width;
@@ -400,7 +383,6 @@
             for (let gx = startCol; gx < endCol; gx++) {
                 const tile = grid[gy][gx];
                 if (tile === Level.TILE.EMPTY) continue;
-
                 const x = gx * T;
                 const y = gy * T;
 
@@ -410,24 +392,12 @@
                         drawWall(ctx, x, y, T, theme, showGrass);
                         break;
                     }
-                    case Level.TILE.PLATFORM:
-                        drawPlatform(ctx, x, y, T, theme);
-                        break;
-                    case Level.TILE.BERRY:
-                        drawBerry(ctx, x, y, T, gx, gy);
-                        break;
-                    case Level.TILE.CRYSTAL:
-                        drawCrystal(ctx, x, y, T, gx, gy);
-                        break;
-                    case Level.TILE.NUT:
-                        drawNut(ctx, x, y, T, gx, gy);
-                        break;
-                    case Level.TILE.SPIKE:
-                        drawSpike(ctx, x, y, T, theme);
-                        break;
-                    case Level.TILE.WATER:
-                        drawWater(ctx, x, y, T, theme, gx, gy, grid);
-                        break;
+                    case Level.TILE.PLATFORM: drawPlatform(ctx, x, y, T, theme); break;
+                    case Level.TILE.BERRY: drawBerry(ctx, x, y, T, gx, gy); break;
+                    case Level.TILE.CRYSTAL: drawCrystal(ctx, x, y, T, gx, gy); break;
+                    case Level.TILE.NUT: drawNut(ctx, x, y, T, gx, gy); break;
+                    case Level.TILE.SPIKE: drawSpike(ctx, x, y, T, theme); break;
+                    case Level.TILE.WATER: drawWater(ctx, x, y, T, theme, gx, gy, grid); break;
                 }
             }
         }
@@ -436,33 +406,27 @@
         drawPortal(ctx, portal.x, portal.y, portal.w, portal.h, Level.isPortalOpen());
     }
 
-    // ─── Отрисовка фона ───────────────────────────────────
     function drawBackground(ctx, viewW, viewH, camX, camY) {
+        const theme = getTheme();
+
         const grad = ctx.createLinearGradient(0, 0, 0, viewH);
-        grad.addColorStop(0, '#010206');
-        grad.addColorStop(0.5, '#030610');
-        grad.addColorStop(1, '#060a18');
+        grad.addColorStop(0, theme.bgTop);
+        grad.addColorStop(0.5, '#02040a');
+        grad.addColorStop(1, theme.bgBot);
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, viewW, viewH);
 
         const topGrad = ctx.createRadialGradient(viewW / 2, 0, 0, viewW / 2, 0, viewH * 0.8);
-        topGrad.addColorStop(0, 'rgba(50, 150, 255, 0.15)');
-        topGrad.addColorStop(1, 'rgba(50, 150, 255, 0)');
+        topGrad.addColorStop(0, theme.skyGlow);
+        topGrad.addColorStop(1, 'rgba(0,0,0,0)');
         ctx.fillStyle = topGrad;
         ctx.fillRect(0, 0, viewW, viewH * 0.8);
-
-        const botGrad = ctx.createRadialGradient(viewW / 2, viewH, 0, viewW / 2, viewH, viewH * 0.8);
-        botGrad.addColorStop(0, 'rgba(40, 230, 200, 0.12)');
-        botGrad.addColorStop(1, 'rgba(40, 230, 200, 0)');
-        ctx.fillStyle = botGrad;
-        ctx.fillRect(0, viewH * 0.2, viewW, viewH * 0.8);
 
         const now = performance.now() * 0.003;
         for (const s of stars) {
             const sx = ((s.x * viewW - camX * s.speed) % viewW + viewW) % viewW;
             const sy = ((s.y * viewH - camY * s.speed) % viewH + viewH) % viewH;
             const twinkle = Math.sin(now + s.twinkle) * 0.5 + 0.5;
-
             ctx.globalAlpha = 0.2 + twinkle * 0.8;
             ctx.fillStyle = s.color;
             ctx.beginPath();
@@ -472,13 +436,14 @@
         ctx.globalAlpha = 1;
     }
 
-    // ─── Публичный API ────────────────────────────────────
     window.Tiles = {
         drawBackground,
         drawLevel,
         drawParticles,
         spawnParticles,
-        updateParticles
+        updateParticles,
+        THEMES,
+        getTheme
     };
 
     window.Particles = {

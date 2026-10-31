@@ -27,13 +27,30 @@
         inWater: false,
         hasNut: false,
         lives: 3,
-        maxLives: 3
+        maxLives: 3,
+        nickname: ''
     };
+
+    // ─── Ник ──────────────────────────────────────────────
+    function loadNickname() {
+        try {
+            const saved = localStorage.getItem('kz_nickname');
+            if (saved && saved.trim()) {
+                p.nickname = saved.trim();
+            } else {
+                p.nickname = 'Игрок';
+            }
+        } catch (e) {
+            p.nickname = 'Игрок';
+        }
+    }
+    loadNickname();
 
     const keys = { left: false, right: false, jump: false, dash: false };
 
     function bindKeys() {
         window.addEventListener('keydown', e => {
+            if (e.target.tagName === 'INPUT') return;
             const k = e.key.toLowerCase();
             if (['arrowleft', 'a', 'ф'].includes(k)) keys.left = true;
             if (['arrowright', 'd', 'в'].includes(k)) keys.right = true;
@@ -41,6 +58,7 @@
             if (['shift', 'k', 'л'].includes(k)) keys.dash = true;
         });
         window.addEventListener('keyup', e => {
+            if (e.target.tagName === 'INPUT') return;
             const k = e.key.toLowerCase();
             if (['arrowleft', 'a', 'ф'].includes(k)) keys.left = false;
             if (['arrowright', 'd', 'в'].includes(k)) keys.right = false;
@@ -108,10 +126,8 @@
         }
     }
 
-    // ─── Потеря жизни (откидывание) ──────────────────────
     function takeDamage(sourceX) {
         if (p.invuln > 0) return;
-
         p.lives--;
         p.invuln = 90;
 
@@ -129,7 +145,6 @@
         }
     }
 
-    // ─── Респавн (только при смерти) ─────────────────────
     function respawn() {
         p.x = Level.playerStart.x;
         p.y = Level.playerStart.y;
@@ -143,7 +158,6 @@
         }
     }
 
-    // ─── Проверка шипов и воды ───────────────────────────
     function checkHazards() {
         const T = Level.tileSize;
         const centerX = Math.floor((p.x + PHYS.W / 2) / T);
@@ -350,6 +364,38 @@
 
         ctx.restore();
 
+        // ─── НИК НАД ГОЛОВОЙ ─────────────────────────────
+        if (p.nickname) {
+            ctx.save();
+            ctx.font = 'bold 14px "Caveat", cursive';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            const nickY = py - (p.hasNut ? 48 : 34);
+
+            // Свечение/тень для читаемости
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
+            ctx.shadowBlur = 6;
+
+            // Фон-плашка (полупрозрачная, минимальная)
+            const metrics = ctx.measureText(p.nickname);
+            const textW = metrics.width;
+            const padX = 8;
+            const padY = 3;
+            ctx.fillStyle = 'rgba(10, 10, 25, 0.7)';
+            ctx.beginPath();
+            if (ctx.roundRect) {
+                ctx.roundRect(cx - textW / 2 - padX, nickY - 9 - padY, textW + padX * 2, 18 + padY * 2, 6);
+            } else {
+                ctx.rect(cx - textW / 2 - padX, nickY - 9 - padY, textW + padX * 2, 18 + padY * 2);
+            }
+            ctx.fill();
+
+            ctx.fillStyle = '#d0e0ff';
+            ctx.fillText(p.nickname, cx, nickY);
+            ctx.restore();
+        }
+
+        // Индикатор прыжков
         for (let i = 0; i < 2; i++) {
             ctx.globalAlpha = i < p.jumpsLeft ? 0.9 : 0.2;
             ctx.fillStyle = '#00e676';
@@ -368,6 +414,7 @@
         update,
         draw,
         respawn,
-        takeDamage
+        takeDamage,
+        reloadNickname: loadNickname
     };
 })();

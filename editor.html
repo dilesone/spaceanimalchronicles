@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Редактор уровней — Космические Хроники Зверьков</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rubik+One&family=Montserrat:wght@300&family=Caveat:wght@400;700&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="menu.css">
+
+<style>
+    .page-title {
+        font-family: 'Rubik One', sans-serif;
+        font-size: clamp(24px, 3.2vw, 40px);
+        letter-spacing: 0.12em;
+        background: linear-gradient(135deg, #a8c8ff 0%, #88ffcc 100%);
+        -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+        filter: drop-shadow(0 0 30px rgba(100, 200, 255, 0.5));
+        text-align: center;
+        margin-bottom: 3vh;
+        pointer-events: auto;
+    }
+
+    .editor-layout {
+        position: fixed;
+        inset: 0;
+        z-index: 30;
+        display: flex;
+        flex-direction: column;
+        padding: 70px 20px 100px 220px;
+        pointer-events: none;
+    }
+
+    .palette {
+        position: fixed;
+        top: 80px; left: 20px; bottom: 90px;
+        width: 180px;
+        display: flex; flex-direction: column;
+        gap: 4px;
+        pointer-events: auto;
+        z-index: 40;
+        overflow-y: auto;
+    }
+
+    .palette-title {
+        font-family: 'Caveat', cursive;
+        font-weight: 700;
+        font-size: 20px;
+        color: #8a9ac8;
+        letter-spacing: 0.1em;
+        margin-bottom: 6px;
+        text-transform: uppercase;
+    }
+
+    .palette-group {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        margin-bottom: 12px;
+    }
+
+    .palette-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 6px 12px;
+        font-family: 'Caveat', cursive;
+        font-size: 20px;
+        color: #c8b8a8;
+        cursor: pointer;
+        transition: all 0.2s;
+        background: none;
+        border: none;
+        text-align: left;
+        text-shadow: 0 2px 5px rgba(0,0,0,0.9);
+        position: relative;
+    }
+    .palette-item:hover { color: #fff5e0; transform: translateX(4px); }
+    .palette-item.active {
+        color: #88ffcc;
+        text-shadow: 0 0 15px rgba(100, 255, 200, 0.7);
+    }
+    .palette-item.active::before {
+        content: '▸';
+        position: absolute;
+        left: -14px;
+        color: #88ffcc;
+    }
+    .palette-item .icon { font-size: 20px; }
+
+    .canvas-wrap {
+        flex: 1;
+        display: flex; align-items: center; justify-content: center;
+        pointer-events: auto;
+        overflow: hidden;
+    }
+
+    canvas#editorCanvas {
+        display: block;
+        background: #0a0a15;
+        cursor: crosshair;
+        image-rendering: pixelated;
+        border: 1px solid rgba(100, 150, 255, 0.3);
+        box-shadow: 0 0 40px rgba(100, 150, 255, 0.2);
+    }
+
+    .editor-bottom {
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        padding: 10px 20px;
+        display: flex; align-items: center; justify-content: center;
+        gap: 10px;
+        background: rgba(10, 15, 30, 0.95);
+        border-top: 1px solid rgba(100, 150, 255, 0.3);
+        backdrop-filter: blur(10px);
+        z-index: 50;
+        pointer-events: auto;
+        flex-wrap: wrap;
+    }
+
+    .name-input {
+        flex: 0 0 200px;
+        padding: 8px 14px;
+        background: transparent;
+        border: none;
+        border-bottom: 1px solid rgba(200, 184, 168, 0.4);
+        color: #d0e0f0;
+        font-family: 'Caveat', cursive;
+        font-size: 20px;
+        outline: none;
+        transition: all 0.2s;
+    }
+    .name-input:focus { border-bottom-color: rgba(168, 200, 255, 0.9); }
+
+    .btn {
+        padding: 8px 20px;
+        border-radius: 10px;
+        border: none;
+        font-family: 'Caveat', cursive;
+        font-weight: 700;
+        font-size: 18px;
+        letter-spacing: 0.03em;
+        cursor: pointer;
+        transition: all 0.2s;
+        white-space: nowrap;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #88ffcc 0%, #4a8ad8 100%);
+        color: #0a0a1f;
+        box-shadow: 0 4px 16px rgba(100, 255, 200, 0.3);
+    }
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(100, 255, 200, 0.5);
+    }
+
+    .btn-secondary {
+        background: transparent;
+        border: 1px solid rgba(100, 150, 255, 0.4);
+        color: #a8c8ff;
+    }
+    .btn-secondary:hover {
+        background: rgba(100, 150, 255, 0.15);
+        border-color: rgba(100, 150, 255, 0.7);
+    }
+
+    .btn-danger {
+        background: transparent;
+        border: 1px solid rgba(255, 100, 150, 0.4);
+        color: #ff7088;
+    }
+    .btn-danger:hover {
+        background: rgba(255, 100, 150, 0.15);
+    }
+
+    .modal-overlay {
+        position: fixed; inset: 0; z-index: 200;
+        display: none; align-items: center; justify-content: center;
+        background: rgba(2, 4, 10, 0.85);
+        backdrop-filter: blur(10px);
+    }
+    .modal-overlay.visible { display: flex; }
+
+    .modal-panel {
+        background: linear-gradient(180deg, rgba(20, 30, 60, 0.95) 0%, rgba(10, 15, 30, 0.95) 100%);
+        border: 1px solid rgba(100, 150, 255, 0.4);
+        border-radius: 20px;
+        padding: 30px 40px;
+        min-width: 500px;
+        max-width: 90vw;
+        max-height: 80vh;
+        overflow-y: auto;
+        box-shadow: 0 20px 80px rgba(0,0,0,0.8), 0 0 60px rgba(100, 150, 255, 0.25);
+        animation: panelPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes panelPop {
+        0%   { opacity: 0; transform: scale(0.9) translateY(20px); }
+        100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .modal-title {
+        font-family: 'Rubik One', sans-serif;
+        font-size: 24px;
+        text-align: center;
+        background: linear-gradient(135deg, #a8c8ff 0%, #88ffcc 100%);
+        -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+        margin-bottom: 20px;
+        letter-spacing: 0.08em;
+    }
+
+    .level-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 16px;
+        margin-bottom: 8px;
+        background: rgba(100, 150, 255, 0.06);
+        border: 1px solid rgba(100, 150, 255, 0.15);
+        border-radius: 12px;
+        color: #d0e0f0;
+        font-family: 'Caveat', cursive;
+        font-size: 22px;
+        transition: all 0.2s;
+    }
+    .level-item:hover {
+        background: rgba(100, 150, 255, 0.15);
+        border-color: rgba(100, 150, 255, 0.4);
+    }
+
+    .level-item .level-name {
+        flex: 1;
+        text-shadow: 0 2px 5px rgba(0,0,0,0.9);
+    }
+
+    .level-item .level-meta {
+        font-size: 14px;
+        color: #8a9ac8;
+        margin-right: 12px;
+    }
+
+    .level-item .level-actions {
+        display: flex;
+        gap: 6px;
+    }
+
+    .level-item button {
+        padding: 4px 10px;
+        background: transparent;
+        border: 1px solid rgba(100, 150, 255, 0.3);
+        border-radius: 8px;
+        color: #a8c8ff;
+        font-family: 'Caveat', cursive;
+        font-size: 16px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .level-item button:hover {
+        background: rgba(100, 150, 255, 0.2);
+        border-color: rgba(100, 150, 255, 0.7);
+    }
+    .level-item button.danger {
+        color: #ff7088;
+        border-color: rgba(255, 100, 150, 0.3);
+    }
+    .level-item button.danger:hover {
+        background: rgba(255, 100, 150, 0.15);
+    }
+
+    .modal-close {
+        width: 100%;
+        margin-top: 16px;
+        padding: 12px;
+        background: linear-gradient(135deg, #88ffcc 0%, #4a8ad8 100%);
+        border: none;
+        border-radius: 12px;
+        font-family: 'Caveat', cursive;
+        font-weight: 700;
+        font-size: 20px;
+        color: #0a0a1f;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .modal-close:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(100, 255, 200, 0.4);
+    }
+
+    .empty-hint {
+        text-align: center;
+        color: #8a9ac8;
+        font-family: 'Caveat', cursive;
+        font-size: 18px;
+        padding: 20px;
+        font-style: italic;
+    }
+
+    @media (max-width: 900px) {
+        .editor-layout { padding-left: 180px; }
+        .palette { width: 160px; }
+        .modal-panel { min-width: 0; width: 92%; padding: 20px; }
+    }
+</style>
+</head>
+
+<body>
+
+<div class="scene">
+    <div class="bg-container">
+        <div class="sky parallax-layer" data-speed="0"></div>
+        <div class="stars parallax-layer" id="stars" data-speed="0.1"></div>
+        <div class="planet-far parallax-layer" data-speed="0.15"></div>
+    </div>
+
+    <div class="gradient-layer">
+        <div class="gradient-top"></div>
+        <div class="gradient-bottom"></div>
+    </div>
+
+    <div class="comet-container" id="comet-container"></div>
+    <div class="vignette"></div>
+
+    <a href="index.html" class="back-btn">← В меню</a>
+
+    <!-- Палитра -->
+    <div class="palette">
+        <div class="palette-title">Тайлы</div>
+        <div class="palette-group" id="tile-palette"></div>
+        <div class="palette-title">Инструменты</div>
+        <div class="palette-group" id="tool-palette"></div>
+    </div>
+
+    <!-- Холст -->
+    <div class="editor-layout">
+        <div class="canvas-wrap">
+            <canvas id="editorCanvas"></canvas>
+        </div>
+    </div>
+
+    <!-- Нижняя панель -->
+    <div class="editor-bottom">
+        <input type="text" id="level-name" class="name-input" placeholder="Название уровня..." value="Мой уровень" maxlength="40">
+        <button class="btn btn-primary" id="btn-save">💾 Сохранить</button>
+        <button class="btn btn-primary" id="btn-play">▶ Играть</button>
+        <button class="btn btn-secondary" id="btn-load-list">📂 Мои уровни</button>
+        <button class="btn btn-secondary" id="btn-export">⬇ Экспорт</button>
+        <button class="btn btn-secondary" id="btn-import">⬆ Импорт</button>
+        <button class="btn btn-danger" id="btn-clear">🗑 Очистить</button>
+        <input type="file" id="file-import" accept=".json" style="display:none;">
+    </div>
+
+    <div class="footer">v0.3 alpha <span>•</span> editor</div>
+</div>
+
+<!-- Модалка списка уровней -->
+<div id="levels-modal" class="modal-overlay">
+    <div class="modal-panel">
+        <div class="modal-title">МОИ УРОВНИ</div>
+        <div id="levels-list"></div>
+        <button class="modal-close" id="levels-close">Закрыть</button>
+    </div>
+</div>
+
+<script src="menu.js"></script>
+<script>
+(() => {
+    'use strict';
+
+    const TILE = 32;
+    const W = 40;
+    const H = 40;
+
+    const T = {
+        EMPTY: 0,
+        WALL: 1,
+        PLATFORM: 2,
+        BERRY: 3,
+        CRYSTAL: 4,
+        NUT: 5,
+        SPIKE: 6,
+        WATER: 7
+    };
+
+    const PALETTE_TILES = [
+        { tool: 'wall',     tile: T.WALL,     icon: '🧱', label: 'Стена' },
+        { tool: 'platform', tile: T.PLATFORM, icon: '🟫', label: 'Платформа' },
+        { tool: 'berry',    tile: T.BERRY,    icon: '🍓', label: 'Ягода' },
+        { tool: 'crystal',  tile: T.CRYSTAL,  icon: '💎', label: 'Кристалл' },
+        { tool: 'nut',      tile: T.NUT,      icon: '🌰', label: 'Орех' },
+        { tool: 'spike',    tile: T.SPIKE,    icon: '⚡', label: 'Шипы' },
+        { tool: 'water',    tile: T.WATER,    icon: '💧', label: 'Вода' }
+    ];
+
+    const PALETTE_TOOLS = [
+        { tool: 'start',  icon: '🙂', label: 'Старт' },
+        { tool: 'portal', icon: '🌀', label: 'Портал' },
+        { tool: 'erase',  icon: '⬜', label: 'Ластик' }
+    ];
+
+    // ─── Состояние ────────────────────────────────────────
+    const state = {
+        grid: Array.from({ length: H }, () => Array(W).fill(T.EMPTY)),
+        playerStart: { gx: 4, gy: 30 },
+        portal: { gx: 34, gy: 25, gw: 2, gh: 3 },
+        tool: 'wall',
+        isDrawing: false,
+        lastGx: -1,
+        lastGy: -1,
+        currentLevelId: null
+    };
+
+    const canvas = document.getElementById('editorCanvas');
+    const ctx = canvas.getContext('2d');
+    const levelName = document.getElementById('level-name');
+    const levelsModal = document.getElementById('levels-modal');
+    const levelsList = document.getElementById('levels-list');
+    const fileImport = document.getElementById('file-import');
+
+    // ─── Хранилище уровней ────────────────────────────────
+    const STORAGE_KEY = 'kz_user_levels';
+
+    function loadLevels() {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            return raw ? JSON.parse(raw) : [];
+        } catch (e) { return []; }
+    }
+
+    function saveLevels(levels) {
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(levels));
+        } catch (e) {
+            alert('Не удалось сохранить (хранилище переполнено?)');
+        }
+    }
+
+    function addLevelToStorage(level) {
+        const levels = loadLevels();
+        const idx = levels.findIndex(l => l.id === level.id);
+        if (idx >= 0) levels[idx] = level;
+        else levels.push(level);
+        saveLevels(levels);
+    }
+
+    function deleteLevelFromStorage(id) {
+        const levels = loadLevels().filter(l => l.id !== id);
+        saveLevels(levels);
+    }
+
+    // ─── Рендер ───────────────────────────────────────────
+    function resize() {
+        const wrap = document.querySelector('.canvas-wrap');
+        if (!wrap) return;
+        const availW = wrap.clientWidth - 40;
+        const availH = wrap.clientHeight - 40;
+        const scale = Math.min(availW / (W * TILE), availH / (H * TILE));
+        canvas.width = W * TILE;
+        canvas.height = H * TILE;
+        canvas.style.width = (W * TILE * scale) + 'px';
+        canvas.style.height = (H * TILE * scale) + 'px';
+    }
+    window.addEventListener('resize', resize);
+
+    function draw() {
+        ctx.fillStyle = '#0a0a15';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.strokeStyle = 'rgba(100, 150, 255, 0.08)';
+        ctx.lineWidth = 1;
+        for (let x = 0; x <= W; x++) {
+            ctx.beginPath();
+            ctx.moveTo(x * TILE + 0.5, 0);
+            ctx.lineTo(x * TILE + 0.5, H * TILE);
+            ctx.stroke();
+        }
+        for (let y = 0; y <= H; y++) {
+            ctx.beginPath();
+            ctx.moveTo(0, y * TILE + 0.5);
+            ctx.lineTo(W * TILE, y * TILE + 0.5);
+            ctx.stroke();
+        }
+
+        for (let y = 0; y < H; y++) {
+            for (let x = 0; x < W; x++) {
+                const t = state.grid[y][x];
+                if (t !== T.EMPTY) drawTile(t, x, y);
+            }
+        }
+
+        drawStart();
+        drawPortal();
+
+        if (state.lastGx >= 0 && state.lastGx < W && state.lastGy >= 0 && state.lastGy < H) {
+            ctx.strokeStyle = '#88ffcc';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(state.lastGx * TILE + 1, state.lastGy * TILE + 1, TILE - 2, TILE - 2);
+        }
+    }
+
+    function drawTile(t, x, y) {
+        const px = x * TILE, py = y * TILE;
+        switch (t) {
+            case T.WALL:
+                ctx.fillStyle = '#3a2a1a';
+                ctx.fillRect(px, py, TILE, TILE);
+                ctx.fillStyle = '#2a5a2a';
+                ctx.fillRect(px, py, TILE, 4);
+                ctx.strokeStyle = '#2a1a0a';
+                ctx.strokeRect(px + 0.5, py + 0.5, TILE - 1, TILE - 1);
+                break;
+            case T.PLATFORM:
+                ctx.fillStyle = '#7acc4a';
+                ctx.fillRect(px, py + 8, TILE, TILE / 3);
+                ctx.strokeStyle = '#2d5a2d';
+                ctx.strokeRect(px + 0.5, py + 8.5, TILE - 1, TILE / 3 - 1);
+                break;
+            case T.BERRY:
+                ctx.fillStyle = '#e8305a';
+                ctx.beginPath();
+                ctx.arc(px + TILE/2, py + TILE/2, TILE/3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#2a8a2a';
+                ctx.beginPath();
+                ctx.ellipse(px + TILE/2, py + 6, 5, 3, -0.3, 0, Math.PI * 2);
+                ctx.fill();
+                break;
+            case T.CRYSTAL:
+                ctx.fillStyle = '#a8d8ff';
+                ctx.beginPath();
+                ctx.moveTo(px + TILE/2, py + 4);
+                ctx.lineTo(px + TILE - 8, py + TILE/2);
+                ctx.lineTo(px + TILE/2, py + TILE - 4);
+                ctx.lineTo(px + 8, py + TILE/2);
+                ctx.closePath();
+                ctx.fill();
+                break;
+            case T.NUT:
+                ctx.fillStyle = '#8b5a2b';
+                ctx.beginPath();
+                ctx.ellipse(px + TILE/2, py + TILE/2 + 2, TILE/3, TILE/3.5, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#5a3a1b';
+                ctx.beginPath();
+                ctx.ellipse(px + TILE/2, py + TILE/3, TILE/3, TILE/8, 0, 0, Math.PI * 2);
+                ctx.fill();
+                break;
+            case T.SPIKE:
+                ctx.fillStyle = '#c84a4a';
+                for (let s = 0; s < 3; s++) {
+                    const sx = px + s * (TILE / 3);
+                    ctx.beginPath();
+                    ctx.moveTo(sx, py + TILE);
+                    ctx.lineTo(sx + TILE / 6, py + TILE / 3);
+                    ctx.lineTo(sx + TILE / 3, py + TILE);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+                break;
+            case T.WATER:
+                ctx.fillStyle = 'rgba(60, 140, 180, 0.7)';
+                ctx.fillRect(px, py, TILE, TILE);
+                ctx.fillStyle = 'rgba(200, 240, 255, 0.4)';
+                ctx.fillRect(px, py, TILE, 3);
+                break;
+        }
+    }
+
+    function drawStart() {
+        const { gx, gy } = state.playerStart;
+        ctx.fillStyle = '#ffd84a';
+        ctx.fillRect(gx * TILE + 4, gy * TILE + 4, TILE - 8, TILE - 8);
+        ctx.strokeStyle = '#0a0a1f';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(gx * TILE + 4, gy * TILE + 4, TILE - 8, TILE - 8);
+        ctx.fillStyle = '#0a0a1f';
+        ctx.font = 'bold 16px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('▶', gx * TILE + TILE/2, gy * TILE + TILE/2);
+    }
+
+    // Портал в том же стиле, что и в игре
+    function drawPortal() {
+        const p = state.portal;
+        const x = p.gx * TILE;
+        const y = p.gy * TILE;
+        const w = p.gw * TILE;
+        const h = p.gh * TILE;
+        const cx = x + w / 2;
+        const cy = y + h / 2;
+
+        const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, w);
+        glow.addColorStop(0, 'rgba(100, 255, 200, 0.35)');
+        glow.addColorStop(1, 'rgba(100, 255, 200, 0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(cx, cy, w, 0, Math.PI * 2);
+        ctx.fill();
+
+        const coreGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, w / 2);
+        coreGrad.addColorStop(0, '#0a2a3a');
+        coreGrad.addColorStop(1, '#2a6a7a');
+        ctx.fillStyle = coreGrad;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, w / 2, h / 2, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = '#88ffcc';
+        ctx.lineWidth = 3;
+        ctx.shadowColor = '#88ffcc';
+        ctx.shadowBlur = 15;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, w / 2, h / 2, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+    }
+
+    function screenToGrid(clientX, clientY) {
+        const rect = canvas.getBoundingClientRect();
+        const scale = canvas.width / rect.width;
+        const x = (clientX - rect.left) * scale;
+        const y = (clientY - rect.top) * scale;
+        return { gx: Math.floor(x / TILE), gy: Math.floor(y / TILE) };
+    }
+
+    function applyTool(gx, gy, isErase) {
+        if (gx < 0 || gx >= W || gy < 0 || gy >= H) return;
+
+        if (state.tool === 'start') {
+            if (!isErase) state.playerStart = { gx, gy };
+            return;
+        }
+        if (state.tool === 'portal') {
+            if (!isErase) {
+                if (gx + state.portal.gw >= W || gy + state.portal.gh >= H) return;
+                state.portal = { gx, gy, gw: state.portal.gw, gh: state.portal.gh };
+                for (let dy = 0; dy < state.portal.gh; dy++)
+                    for (let dx = 0; dx < state.portal.gw; dx++)
+                        state.grid[gy + dy][gx + dx] = T.EMPTY;
+            }
+            return;
+        }
+
+        if (gx === state.playerStart.gx && gy === state.playerStart.gy && !isErase) return;
+        if (gx >= state.portal.gx && gx < state.portal.gx + state.portal.gw &&
+            gy >= state.portal.gy && gy < state.portal.gy + state.portal.gh && !isErase) return;
+
+        if (isErase || state.tool === 'erase') {
+            state.grid[gy][gx] = T.EMPTY;
+        } else {
+            const item = PALETTE_TILES.find(p => p.tool === state.tool);
+            if (item) state.grid[gy][gx] = item.tile;
+        }
+    }
+
+    function drawLine(x0, y0, x1, y1, isErase) {
+        let dx = Math.abs(x1 - x0), dy = Math.abs(y1 - y0);
+        let sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
+        let err = dx - dy, x = x0, y = y0;
+        while (true) {
+            applyTool(x, y, isErase);
+            if (x === x1 && y === y1) break;
+            const e2 = 2 * err;
+            if (e2 > -dy) { err -= dy; x += sx; }
+            if (e2 < dx) { err += dx; y += sy; }
+        }
+    }
+
+    // ─── Палитра ──────────────────────────────────────────
+    const tilePalette = document.getElementById('tile-palette');
+    const toolPalette = document.getElementById('tool-palette');
+
+    PALETTE_TILES.forEach(item => {
+        const el = document.createElement('button');
+        el.className = 'palette-item';
+        el.dataset.tool = item.tool;
+        el.innerHTML = `<span class="icon">${item.icon}</span><span>${item.label}</span>`;
+        el.addEventListener('click', () => selectTool(item.tool));
+        tilePalette.appendChild(el);
+    });
+
+    PALETTE_TOOLS.forEach(item => {
+        const el = document.createElement('button');
+        el.className = 'palette-item';
+        el.dataset.tool = item.tool;
+        el.innerHTML = `<span class="icon">${item.icon}</span><span>${item.label}</span>`;
+        el.addEventListener('click', () => selectTool(item.tool));
+        toolPalette.appendChild(el);
+    });
+
+    function selectTool(tool) {
+        state.tool = tool;
+        document.querySelectorAll('.palette-item').forEach(el => {
+            el.classList.toggle('active', el.dataset.tool === tool);
+        });
+    }
+
+    // ─── Мышь ─────────────────────────────────────────────
+    canvas.addEventListener('mousemove', (e) => {
+        const { gx, gy } = screenToGrid(e.clientX, e.clientY);
+        state.lastGx = gx;
+        state.lastGy = gy;
+        if (state.isDrawing) drawLine(state.lastGx, state.lastGy, gx, gy, e.buttons === 2);
+        draw();
+    });
+
+    canvas.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        const { gx, gy } = screenToGrid(e.clientX, e.clientY);
+        state.isDrawing = true;
+        state.lastGx = gx;
+        state.lastGy = gy;
+        applyTool(gx, gy, e.button === 2);
+        draw();
+    });
+
+    window.addEventListener('mouseup', () => { state.isDrawing = false; });
+    canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+    // ─── Сериализация ─────────────────────────────────────
+    function serializeLevel() {
+        let berries = 0, crystals = 0, nuts = 0;
+        for (let y = 0; y < H; y++) {
+            for (let x = 0; x < W; x++) {
+                const t = state.grid[y][x];
+                if (t === T.BERRY) berries++;
+                else if (t === T.CRYSTAL) crystals++;
+                else if (t === T.NUT) nuts++;
+            }
+        }
+
+        if (nuts === 0) {
+            for (let y = H - 3; y > 0; y--) {
+                for (let x = 2; x < W - 2; x++) {
+                    if (state.grid[y][x] === T.EMPTY && state.grid[y + 1] && state.grid[y + 1][x] === T.WALL) {
+                        state.grid[y][x] = T.NUT;
+                        nuts = 1;
+                        break;
+                    }
+                }
+                if (nuts > 0) break;
+            }
+        }
+
+        return {
+            id: state.currentLevelId || ('lvl_' + Date.now()),
+            name: levelName.value || 'Мой уровень',
+            tileSize: 48,
+            mapWidth: W,
+            mapHeight: H,
+            playerStart: { gx: state.playerStart.gx, gy: state.playerStart.gy },
+            portal: { gx: state.portal.gx, gy: state.portal.gy, gw: state.portal.gw, gh: state.portal.gh },
+            totalBerries: berries,
+            totalCrystals: crystals,
+            totalNuts: nuts,
+            theme: 'forest',
+            grid: state.grid.map(row => row.slice())
+        };
+    }
+
+    function applyLevelData(data) {
+        state.grid = data.grid.map(row => Array.isArray(row) ? row.slice() : row.split('').map(Number));
+        state.playerStart = data.playerStart.gx !== undefined
+            ? { gx: data.playerStart.gx, gy: data.playerStart.gy }
+            : { gx: Math.floor(data.playerStart.x / 48), gy: Math.floor(data.playerStart.y / 48) };
+        state.portal = data.portal.gx !== undefined
+            ? { gx: data.portal.gx, gy: data.portal.gy, gw: data.portal.gw || 2, gh: data.portal.gh || 3 }
+            : { gx: Math.floor(data.portal.x / 48), gy: Math.floor(data.portal.y / 48), gw: 2, gh: 3 };
+        state.currentLevelId = data.id || null;
+        levelName.value = data.name || 'Мой уровень';
+        draw();
+    }
+
+    function loadIntoGame(data) {
+        // Сохраняем уровень для игры
+        localStorage.setItem('kz_editor_level', JSON.stringify(data));
+        localStorage.setItem('kz_play_mode', 'editor');
+        window.location.href = 'game.html';
+    }
+
+    // ─── Список уровней ───────────────────────────────────
+    function openLevelsList() {
+        levelsModal.classList.add('visible');
+        renderLevelsList();
+    }
+
+    function renderLevelsList() {
+        const levels = loadLevels();
+        levelsList.innerHTML = '';
+
+        if (levels.length === 0) {
+            levelsList.innerHTML = '<div class="empty-hint">Уровней пока нет</div>';
+            return;
+        }
+
+        levels.forEach(level => {
+            const el = document.createElement('div');
+            el.className = 'level-item';
+            el.innerHTML = `
+                <span class="level-name">${escapeHtml(level.name)}</span>
+                <span class="level-meta">${level.mapWidth}×${level.mapHeight}</span>
+                <div class="level-actions">
+                    <button data-action="load">Загрузить</button>
+                    <button data-action="play">Играть</button>
+                    <button class="danger" data-action="delete">Удалить</button>
+                </div>
+            `;
+
+            el.querySelector('[data-action="load"]').onclick = () => {
+                applyLevelData(level);
+                levelsModal.classList.remove('visible');
+            };
+            el.querySelector('[data-action="play"]').onclick = () => {
+                localStorage.setItem('kz_editor_level', JSON.stringify(level));
+                localStorage.setItem('kz_play_mode', 'editor');
+                window.location.href = 'game.html';
+            };
+            el.querySelector('[data-action="delete"]').onclick = () => {
+                if (confirm(`Удалить «${level.name}»?`)) {
+                    deleteLevelFromStorage(level.id);
+                    renderLevelsList();
+                }
+            };
+
+            levelsList.appendChild(el);
+        });
+    }
+
+    function escapeHtml(str) {
+        return String(str).replace(/[&<>"']/g, c => ({
+            '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+        })[c]);
+    }
+
+    // ─── Кнопки ───────────────────────────────────────────
+    document.getElementById('btn-save').addEventListener('click', () => {
+        const data = serializeLevel();
+        state.currentLevelId = data.id;
+        addLevelToStorage(data);
+        alert('Уровень сохранён: ' + data.name);
+    });
+
+    document.getElementById('btn-play').addEventListener('click', () => {
+        const data = serializeLevel();
+        localStorage.setItem('kz_editor_level', JSON.stringify(data));
+        localStorage.setItem('kz_play_mode', 'editor');
+        window.location.href = 'game.html';
+    });
+
+    document.getElementById('btn-load-list').addEventListener('click', openLevelsList);
+    document.getElementById('levels-close').addEventListener('click', () => {
+        levelsModal.classList.remove('visible');
+    });
+    levelsModal.addEventListener('click', (e) => {
+        if (e.target === levelsModal) levelsModal.classList.remove('visible');
+    });
+
+    // Экспорт
+    document.getElementById('btn-export').addEventListener('click', () => {
+        const data = serializeLevel();
+        const json = JSON.stringify(data, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = (data.name || 'level').replace(/[^a-zа-я0-9_-]/gi, '_') + '.json';
+        a.click();
+        URL.revokeObjectURL(url);
+    });
+
+    // Импорт
+    document.getElementById('btn-import').addEventListener('click', () => {
+        fileImport.click();
+    });
+    fileImport.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            try {
+                const data = JSON.parse(ev.target.result);
+                if (!data.grid || !data.mapWidth) throw new Error('Неверный формат');
+                applyLevelData(data);
+                alert('Уровень загружен: ' + (data.name || 'Без названия'));
+            } catch (err) {
+                alert('Ошибка импорта: ' + err.message);
+            }
+            fileImport.value = '';
+        };
+        reader.readAsText(file);
+    });
+
+    // Очистить
+    document.getElementById('btn-clear').addEventListener('click', () => {
+        if (!confirm('Очистить уровень?')) return;
+        state.grid = Array.from({ length: H }, () => Array(W).fill(T.EMPTY));
+        state.playerStart = { gx: 4, gy: 30 };
+        state.portal = { gx: 34, gy: 25, gw: 2, gh: 3 };
+        state.currentLevelId = null;
+        levelName.value = 'Мой уровень';
+        draw();
+    });
+
+    // ─── Старт ────────────────────────────────────────────
+    resize();
+    selectTool('wall');
+    draw();
+
+    // Загрузка последнего уровня
+    const editorData = localStorage.getItem('kz_editor_level');
+    if (editorData) {
+        try {
+            const data = JSON.parse(editorData);
+            applyLevelData(data);
+        } catch (e) {}
+    }
+})();
+</script>
+
+</body>
+</html>

@@ -41,22 +41,105 @@
 </div>
 
 <div class="controls-hint">
-    <b>← →</b> бег · <b>↑ / W / Space</b> прыжок (двойной) · <b>Shift</b> рывок
+    <b>← →</b> бег · <b>↑ / W / Space</b> прыжок · <b>Shift</b> рывок · <b>Esc</b> пауза
 </div>
 
-<div id="win-screen">
-    <div class="win-panel">
-        <h1>ЭВАКУАЦИЯ!</h1>
-        <div class="subtitle">Ты добрался до портала с орехом</div>
-        <div id="win-stats"></div>
-        <div class="win-buttons">
-            <button class="primary" id="btn-restart">Играть заново</button>
-            <button class="secondary" id="btn-to-map">На карту мира</button>
+<!-- ═══════════════ ЧАТ ═══════════════ -->
+<div id="chat" class="chat">
+    <div class="chat-resizer" id="chat-resizer"></div>
+    <div class="chat-header">
+        <div class="chat-title">💬 Чат</div>
+        <div class="chat-actions">
+            <button class="chat-btn" id="chat-settings-btn" title="Настройки чата">⚙</button>
+            <button class="chat-btn" id="chat-toggle" title="Свернуть">—</button>
+        </div>
+    </div>
+    <div class="chat-messages" id="chat-messages"></div>
+    <div class="chat-input-wrap">
+        <input type="text" id="chat-input" class="chat-input" placeholder="Сообщение..." maxlength="120">
+        <button class="chat-send" id="chat-send">→</button>
+    </div>
+    <div class="chat-settings hidden" id="chat-settings">
+        <label class="chat-setting">
+            <span>🕒 Показывать время</span>
+            <label class="switch small">
+                <input type="checkbox" id="chat-show-time">
+                <span class="slider"></span>
+            </label>
+        </label>
+        <label class="chat-setting">
+            <span>🔔 Звук сообщения</span>
+            <label class="switch small">
+                <input type="checkbox" id="chat-sound" checked>
+                <span class="slider"></span>
+            </label>
+        </label>
+        <label class="chat-setting">
+            <span>📢 Системные сообщения</span>
+            <label class="switch small">
+                <input type="checkbox" id="chat-system" checked>
+                <span class="slider"></span>
+            </label>
+        </label>
+        <div class="chat-setting">
+            <span>🧹 Очистить историю</span>
+            <button class="chat-btn" id="chat-clear" style="color:#ff7088;">Очистить</button>
         </div>
     </div>
 </div>
 
+<!-- ═══════════════ ЭКРАН ПОБЕДЫ ═══════════════ -->
+<div id="win-screen" class="fullscreen">
+    <div class="win-panel">
+        <h1>ЭВАКУАЦИЯ!</h1>
+        <div class="subtitle">Ты добрался до портала с орехом</div>
+        <div class="stats-block" id="win-stats"></div>
+        <div class="buttons">
+            <button class="menu-btn" id="btn-next">🎲 Дальше (случайный мир)</button>
+            <button class="menu-btn" id="btn-restart">Играть заново</button>
+            <button class="menu-btn" id="btn-to-map">На карту мира</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════ ЭКРАН ПАУЗЫ ═══════════════ -->
+<div id="pause-screen" class="fullscreen">
+    <div class="win-panel">
+        <h1>ПАУЗА</h1>
+        <div class="subtitle">отдохни немного</div>
+        <div class="buttons">
+            <button class="menu-btn" id="btn-resume">Продолжить</button>
+            <button class="menu-btn" id="btn-pause-settings">Настройки</button>
+            <button class="menu-btn" id="btn-pause-restart">Заново</button>
+            <button class="menu-btn" id="btn-pause-menu">В меню</button>
+        </div>
+
+        <div id="pause-settings" class="pause-settings hidden">
+            <div class="pause-nick">
+                <label class="pause-nick-label">👤 Ник персонажа</label>
+                <input type="text" id="pause-nickname" class="pause-nick-input" maxlength="16" placeholder="Игрок">
+            </div>
+            <div class="setting-item">
+                <span class="label">🎯 Центрирование карты</span>
+                <label class="switch">
+                    <input type="checkbox" id="setting-center" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="setting-item">
+                <span class="label">🎮 Слежение за героем</span>
+                <label class="switch">
+                    <input type="checkbox" id="setting-follow">
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════ СКРИПТЫ ═══════════════ -->
 <script src="audio.js"></script>
+<script src="level-generator.js"></script>
 <script src="level.js"></script>
 <script src="player.js"></script>
 <script src="tiles.js"></script>

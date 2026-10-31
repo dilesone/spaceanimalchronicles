@@ -20,36 +20,22 @@
 
     function play(freq, duration = 0.1, type = 'sine', volume = 0.08) {
         if (!enabled || !audioCtx) return;
-
         try {
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
-
             osc.type = type;
             osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-
             gain.gain.setValueAtTime(volume, audioCtx.currentTime);
             gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
-
             osc.connect(gain);
             gain.connect(audioCtx.destination);
-
             osc.start();
             osc.stop(audioCtx.currentTime + duration);
         } catch (e) {}
     }
 
-    function setEnabled(v) {
-        enabled = !!v;
-    }
-    function isEnabled() {
-        return enabled;
-    }
+    function setEnabled(v) { enabled = !!v; }
+    function isEnabled() { return enabled; }
 
-    window.Audio = {
-        init,
-        play,
-        setEnabled,
-        isEnabled
-    };
+    window.Audio = { init, play, setEnabled, isEnabled };
 })();

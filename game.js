@@ -8,8 +8,6 @@
 
     // --- СЕТЕВОЕ ПОДКЛЮЧЕНИЕ ---
     let socket = null;
-    
-    // Пытаемся взять ID из localStorage, чтобы пережить F5
     let myId = localStorage.getItem('kz_session_id') || null;
     
     // Делаем объекты глобальными для отладки
@@ -25,9 +23,7 @@
     }
 
     function connectToServer() {
-        // Если у нас есть старый ID, передаем его в URL как ?session=...
         const url = myId ? `${SERVER_URL}?session=${myId}` : SERVER_URL;
-        console.log('Подключение к:', url);
         socket = new WebSocket(url);
 
         socket.onopen = () => {
@@ -40,9 +36,7 @@
                 
                 if (data.type === 'init') {
                     myId = data.id;
-                    // СОХРАНЯЕМ ID, чтобы после F5 восстановить сессию
                     localStorage.setItem('kz_session_id', myId);
-                    console.log('Мой ID:', myId);
                 } 
                 else if (data.type === 'online') {
                     onlineElement.textContent = `Онлайн: ${data.count}`;
@@ -55,6 +49,14 @@
                         window.otherPlayers[data.id] = { 
                             x: data.x, 
                             y: data.y,
+                            facing: data.facing || 1,
+                            vx: data.vx || 0,
+                            vy: data.vy || 0,
+                            squash: data.squash || 1,
+                            skew: data.skew || 0,
+                            flipAngle: data.flipAngle || 0,
+                            flipSpeed: data.flipSpeed || 0,
+                            hasNut: data.hasNut || false,
                             lastUpdate: Date.now() 
                         };
                         if (data.nickname) {
@@ -68,10 +70,8 @@
         };
 
         socket.onclose = () => {
-            console.log('Отключено от сервера. Очистка и переподключение...');
             window.otherPlayers = {};
             window.otherNicknames = {};
-            // Переподключаемся через 2 секунды, передавая сохраненный myId
             setTimeout(connectToServer, 2000);
         };
     }
@@ -327,8 +327,7 @@
         if (pauseScreen) pauseScreen.classList.remove('visible');
         if (window.Audio) Audio.init();
     }
-
-    // ═══════════════ ЧАТ ═══════════════
+        // ═══════════════ ЧАТ ═══════════════
     const chatOptions = { showTime: false, sound: true, showSystem: true };
     try {
         const saved = JSON.parse(localStorage.getItem('kz_chat') || '{}');
@@ -676,14 +675,22 @@
             Tiles.updateParticles();
         }
 
-        // --- ОТПРАВКА КООРДИНАТ (даже на паузе, чтобы не исчезать) ---
+        // --- ОТПРАВКА КООРДИНАТ ---
         if (socket && socket.readyState === WebSocket.OPEN && myId) {
             socket.send(JSON.stringify({
                 type: 'move',
                 id: myId,
                 nickname: Player.state.nickname || 'Игрок',
                 x: Player.state.x,
-                y: Player.state.y
+                y: Player.state.y,
+                facing: Player.state.facing,
+                vx: Player.state.vx,
+                vy: Player.state.vy,
+                squash: Player.state.squash,
+                skew: Player.state.skew,
+                flipAngle: Player.state.flipAngle,
+                flipSpeed: Player.state.flipSpeed,
+                hasNut: Player.state.hasNut
             }));
         }
 
@@ -694,7 +701,6 @@
 
         Tiles.drawLevel(ctx, camX, camY, viewW, viewH);
         Tiles.drawParticles(ctx);
-        Player.draw(ctx);
         
         // --- ОТРИСОВКА ДРУГИХ ИГРОКОВ ---
         const now = Date.now();
@@ -702,30 +708,53 @@
             if (id === myId) continue;
             const op = window.otherPlayers[id];
             
-            // УДАЛЕНИЕ ФАНТОМА: если нет данных больше 2.5 сек
             if (!op.lastUpdate || now - op.lastUpdate > 2500) {
                 delete window.otherPlayers[id];
                 delete window.otherNicknames[id];
                 continue;
             }
-            
-            // Красный кружок
-            ctx.fillStyle = '#ff0000';
-            ctx.beginPath();
-            ctx.arc(op.x + Player.PHYS.W / 2, op.y + Player.PHYS.H / 2, 20, 0, Math.PI * 2);
-            ctx.fill();
-            
-            ctx.strokeStyle = 'white';
-            ctx.lineWidth = 3;
-            ctx.stroke();
-            
-            // Никнейм над головой
-            ctx.fillStyle = 'white';
-            ctx.font = 'bold 14px sans-serif';
-            ctx.textAlign = 'center';
-            const displayName = window.otherNicknames[id] || id;
-            ctx.fillText(displayName, op.x + Player.PHYS.W / 2, op.y - 10);
+
+            // Сохраняем данные твоего игрока
+            const original = {
+                x: Player.state.x, y: Player.state.y, facing: Player.state.facing,
+                vx: Player.state.vx, vy: Player.state.vy, squash: Player.state.squash,
+                skew: Player.state.skew, flipAngle: Player.state.flipAngle,
+                flipSpeed: Player.state.flipSpeed, hasNut: Player.state.hasNut,
+                nickname: Player.state.nickname
+            };
+
+            // Подменяем на данные другого игрока
+            Player.state.x = op.x;
+            Player.state.y = op.y;
+            Player.state.facing = op.facing;
+            Player.state.vx = op.vx;
+            Player.state.vy = op.vy;
+            Player.state.squash = op.squash;
+            Player.state.skew = op.skew;
+            Player.state.flipAngle = op.flipAngle;
+            Player.state.flipSpeed = op.flipSpeed;
+            Player.state.hasNut = op.hasNut;
+            Player.state.nickname = window.otherNicknames[id] || id;
+
+            // Рисуем
+            Player.draw(ctx);
+
+            // Возвращаем обратно
+            Player.state.x = original.x;
+            Player.state.y = original.y;
+            Player.state.facing = original.facing;
+            Player.state.vx = original.vx;
+            Player.state.vy = original.vy;
+            Player.state.squash = original.squash;
+            Player.state.skew = original.skew;
+            Player.state.flipAngle = original.flipAngle;
+            Player.state.flipSpeed = original.flipSpeed;
+            Player.state.hasNut = original.hasNut;
+            Player.state.nickname = original.nickname;
         }
+
+        // ТЕПЕРЬ РИСУЕМ ТЕБЯ (чтобы ты всегда был сверху)
+        Player.draw(ctx);
 
         ctx.restore();
 
@@ -772,14 +801,12 @@
             updateHUD();
             loop();
 
-            // Закрываем сокет при уходе со страницы
             window.addEventListener('beforeunload', () => {
                 if (socket && socket.readyState === WebSocket.OPEN) {
                     socket.close();
                 }
             });
 
-            // Запускаем подключение к серверу
             connectToServer();
         }).catch(err => {
             console.error('Ошибка загрузки уровня:', err);
@@ -819,6 +846,6 @@
         }
     });
 
-    // Вызов старта
     start();
 })();
+    

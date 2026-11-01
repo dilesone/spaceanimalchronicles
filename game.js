@@ -10,6 +10,7 @@
     let socket = null;
 
     function connectToServer() {
+        console.log('Попытка подключения к серверу:', SERVER_URL);
         socket = new WebSocket(SERVER_URL);
 
         socket.onopen = () => {
@@ -23,12 +24,18 @@
                 if (data.type === 'chat') {
                     addChatMessage(data.author, data.text);
                 }
-            } catch (e) {}
+            } catch (e) {
+                console.error('Ошибка парсинга сообщения:', e);
+            }
         };
 
         socket.onclose = () => {
             console.log('Отключено от сервера. Переподключение...');
             setTimeout(connectToServer, 3000);
+        };
+        
+        socket.onerror = (err) => {
+            console.error('Ошибка WebSocket:', err);
         };
     }
 
@@ -152,7 +159,6 @@
         const mode = localStorage.getItem('kz_play_mode') || 'fixed';
         const key = localStorage.getItem('kz_play_key') || 'forest';
 
-        // Сохраняем прогресс только для фиксированных локаций
         if (mode === 'fixed') {
             try {
                 const progress = JSON.parse(localStorage.getItem('kz_progress') || '{}');
@@ -322,7 +328,8 @@
         });
     }
 
-    const chatHistory = [];
+    // ВАЖНО: Используем var, чтобы избежать ошибки инициализации при подключении
+    var chatHistory = [];
 
     function addChatMessage(author, text, isSystem = false) {
         const now = new Date();
@@ -380,6 +387,8 @@
                 author: Player.state.nickname || 'Игрок',
                 text: text
             }));
+        } else {
+            console.warn('Сокет не подключен, сообщение не отправлено');
         }
         
         addChatMessage(Player.state.nickname || 'Игрок', text);
@@ -446,7 +455,6 @@
     function loadLevelByMode() {
         const mode = localStorage.getItem('kz_play_mode') || 'fixed';
 
-        // Режим "редактор"
         if (mode === 'editor') {
             const editorData = localStorage.getItem('kz_editor_level');
             if (editorData) {
@@ -460,7 +468,6 @@
             }
         }
 
-        // Режим "случайный мир" (с рандомной темой)
         if (mode === 'random') {
             const seed = Math.floor(Math.random() * 1e9);
             localStorage.setItem('kz_random_seed', String(seed));
@@ -469,7 +476,6 @@
             count++;
             localStorage.setItem('kz_random_count', String(count));
 
-            // Случайная тема для случайного мира
             const randomThemes = ['forest', 'desert', 'mountains', 'dungeon'];
             const randomTheme = randomThemes[Math.floor(Math.random() * randomThemes.length)];
 
@@ -496,7 +502,6 @@
             });
         }
 
-        // Режим "фиксированная локация"
         const key = localStorage.getItem('kz_play_key') || 'forest';
         const theme = localStorage.getItem('kz_play_theme') || 'forest';
         
@@ -690,6 +695,9 @@
 
             updateHUD();
             loop();
+
+            // Запускаем подключение к серверу ТОЛЬКО после загрузки уровня
+            connectToServer();
         }).catch(err => {
             console.error('Ошибка загрузки уровня:', err);
             ctx.fillStyle = '#ff7088';
@@ -728,7 +736,6 @@
         }
     });
 
-    // Запускаем подключение к серверу
-    
+    // Вызов старта
     start();
 })();

@@ -8,7 +8,9 @@
 
     // --- СЕТЕВОЕ ПОДКЛЮЧЕНИЕ ---
     let socket = null;
-    let myId = null;
+    
+    // Пытаемся взять ID из localStorage, чтобы пережить F5
+    let myId = localStorage.getItem('kz_session_id') || null;
     
     // Делаем объекты глобальными для отладки
     window.otherPlayers = {};
@@ -23,7 +25,10 @@
     }
 
     function connectToServer() {
-        socket = new WebSocket(SERVER_URL);
+        // Если у нас есть старый ID, передаем его в URL как ?session=...
+        const url = myId ? `${SERVER_URL}?session=${myId}` : SERVER_URL;
+        console.log('Подключение к:', url);
+        socket = new WebSocket(url);
 
         socket.onopen = () => {
             addChatMessage('Система', 'Вы подключены к серверу', true);
@@ -35,6 +40,8 @@
                 
                 if (data.type === 'init') {
                     myId = data.id;
+                    // СОХРАНЯЕМ ID, чтобы после F5 восстановить сессию
+                    localStorage.setItem('kz_session_id', myId);
                     console.log('Мой ID:', myId);
                 } 
                 else if (data.type === 'online') {
@@ -45,7 +52,6 @@
                 } 
                 else if (data.type === 'move') {
                     if (data.id !== myId) {
-                        // СТРОКА НИЖЕ ВАЖНА: сохраняем время получения пакета (lastUpdate)
                         window.otherPlayers[data.id] = { 
                             x: data.x, 
                             y: data.y,
@@ -65,7 +71,8 @@
             console.log('Отключено от сервера. Очистка и переподключение...');
             window.otherPlayers = {};
             window.otherNicknames = {};
-            setTimeout(connectToServer, 3000);
+            // Переподключаемся через 2 секунды, передавая сохраненный myId
+            setTimeout(connectToServer, 2000);
         };
     }
 
@@ -667,17 +674,17 @@
             checkPortal();
             updateCamera();
             Tiles.updateParticles();
-            
-            // --- ОТПРАВКА КООРДИНАТ (с ником) ---
-            if (socket && socket.readyState === WebSocket.OPEN && myId) {
-                socket.send(JSON.stringify({
-                    type: 'move',
-                    id: myId,
-                    nickname: Player.state.nickname || 'Игрок',
-                    x: Player.state.x,
-                    y: Player.state.y
-                }));
-            }
+        }
+
+        // --- ОТПРАВКА КООРДИНАТ (даже на паузе, чтобы не исчезать) ---
+        if (socket && socket.readyState === WebSocket.OPEN && myId) {
+            socket.send(JSON.stringify({
+                type: 'move',
+                id: myId,
+                nickname: Player.state.nickname || 'Игрок',
+                x: Player.state.x,
+                y: Player.state.y
+            }));
         }
 
         Tiles.drawBackground(ctx, viewW, viewH, camX, camY);
@@ -689,7 +696,7 @@
         Tiles.drawParticles(ctx);
         Player.draw(ctx);
         
-        // --- ОТРИСОВКА ДРУГИХ ИГРОКОВ И ОЧИСТКА ФАНТОМОВ ---
+        // --- ОТРИСОВКА ДРУГИХ ИГРОКОВ ---
         const now = Date.now();
         for (const id in window.otherPlayers) {
             if (id === myId) continue;

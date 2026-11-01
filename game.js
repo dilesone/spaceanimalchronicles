@@ -34,7 +34,6 @@
     }
 
     async function findRoom() {
-        // 1. ПЕРЕХОД ПОСЛЕ ФИНИША — возвращаемся в ту же комнату (через sessionStorage)
         const isAfterFinish = sessionStorage.getItem('kz_after_finish');
         if (isAfterFinish) {
             sessionStorage.removeItem('kz_after_finish');
@@ -42,7 +41,6 @@
             if (savedRoom) return savedRoom;
         }
 
-        // 2. ПОИСК АКТИВНОЙ КОМНАТЫ (или создание новой на сервере)
         try {
             const query = roomType === 'random' ? 'type=random' : `type=${fixedKey}`;
             const res = await fetch(`${HTTP_URL}/find-room?${query}`);
@@ -99,6 +97,7 @@
 
                             if (!window.__gameActive) {
                                 window.__gameActive = true;
+                                isLoopRunning = false;
                                 loop();
                             }
                         });
@@ -125,7 +124,6 @@
                 else if (data.type === 'player_collected') {
                     const itemType = data.itemType;
                     
-                    // Ягоды и кристаллы — удаляем у всех
                     if (itemType === 'berry' || itemType === 'crystal') {
                         Level.setTile(data.gx, data.gy, Level.TILE.EMPTY);
                         if (window.Particles) {
@@ -137,22 +135,15 @@
                         }
                     }
                     
-                    // Орех — удаляем ТОЛЬКО У СЕБЯ, если это я его взял
                     if (itemType === 'nut') {
                         if (data.id === myId) {
                             Level.setTile(data.gx, data.gy, Level.TILE.EMPTY);
                             Player.state.hasNut = true;
                         }
-                        // У других орех НЕ удаляется (они могут взять его позже)
                     }
                     
-                    // Обновляем общий прогресс
                     if (data.collected) Level.state.collected = data.collected;
-                    
-                    // Если это я собрал — обновляем личный
-                    if (data.id === myId && data.personal) {
-                        Level.state.personal = data.personal;
-                    }
+                    if (data.id === myId && data.personal) Level.state.personal = data.personal;
                     
                     updateHUD();
                 }
@@ -173,10 +164,8 @@
                     }
                 }
                 else if (data.type === 'next_level') {
-                    // НЕ перезагружаем страницу, а генерируем новый уровень на месте
                     console.log('Переход на новый уровень!');
                     
-                    // Сбрасываем прогресс
                     Level.state.collected = data.collected || { berries: 0, crystals: 0, nuts: 0 };
                     Level.state.personal = data.personal || { berries: 0, crystals: 0, nuts: 0 };
                     
@@ -199,7 +188,6 @@
                             camY = maxY / 2;
                         }
                         
-                        // Скрываем экран победы
                         if (winScreen) winScreen.classList.remove('visible');
                         if (document.getElementById('wait-timer')) {
                             document.getElementById('wait-timer').remove();
@@ -207,8 +195,11 @@
                         if (btnWait) btnWait.style.display = 'none';
                         
                         updateHUD();
+                        
                         window.__gameActive = true;
                         paused = false;
+                        isLoopRunning = false;
+                        loop(); // перезапуск
                     });
                 }
             } catch (e) { console.error('Ошибка:', e); }
@@ -241,9 +232,9 @@
             theme: theme,
             difficulty: 'normal',
             seed: seedToUse,
-            totalBerries: 12,    // Больше ягод
-            totalCrystals: 8,    // Больше кристаллов
-            totalNuts: 1,        // Один орех
+            totalBerries: 12,
+            totalCrystals: 8,
+            totalNuts: 1,
             width: 40,
             height: 40,
             terrain: 'ground'
@@ -296,6 +287,7 @@
     let camX = 0, camY = 0;
     let portalOpen = false;
     let paused = false;
+    let isLoopRunning = false;
 
     function resize() {
         viewW = window.innerWidth;
@@ -307,8 +299,8 @@
     resize();
 
     function updateHUD() {
-        const s = Level.state.collected; // ОБЩИЙ
-        const p = Level.state.personal || { berries: 0, crystals: 0, nuts: 0 }; // ЛИЧНЫЙ
+        const s = Level.state.collected;
+        const p = Level.state.personal || { berries: 0, crystals: 0, nuts: 0 };
 
         if (hudBerries) hudBerries.textContent = `${s.berries} / ${Level.state.totalBerries}`;
         if (hudCrystals) hudCrystals.textContent = `${s.crystals} / ${Level.state.totalCrystals}`;
@@ -316,11 +308,9 @@
         if (hudLives) hudLives.textContent = '❤️'.repeat(Math.max(0, Player.state.lives));
 
         if (hudPersonal) {
-            const totalPersonal = p.berries + p.crystals + p.nuts;
-            hudPersonal.textContent = `${totalPersonal}`;
+            hudPersonal.textContent = `${p.berries + p.crystals + p.nuts}`;
         }
 
-        // Портал открывается по ОБЩЕМУ счету
         const totalNeeded = Level.state.totalBerries + Level.state.totalCrystals;
         const totalCollected = s.berries + s.crystals;
         portalOpen = totalCollected >= totalNeeded / 2;
@@ -340,7 +330,6 @@
         const result = Level.collectAt(gx, gy);
         if (!result) return;
 
-        // Отправляем на сервер, НЕ увеличиваем счетчики локально
         if (socket && socket.readyState === WebSocket.OPEN) {
             socket.send(JSON.stringify({ type: 'collect', id: myId, gx: gx, gy: gy, itemType: result.type }));
         }
@@ -597,7 +586,12 @@
     }
 
     function loop() {
-        if (window.__gameActive === false) return;
+        if (window.__gameActive === false) {
+            isLoopRunning = false;
+            return;
+        }
+
+        isLoopRunning = true;
 
         if (!paused) {
             Player.update();
@@ -644,6 +638,7 @@
 
     function start() {
         window.__gameActive = false;
+        isLoopRunning = false;
         document.addEventListener('click', () => { if (window.Audio) Audio.init(); }, { once: true });
         window.addEventListener('keydown', () => { if (window.Audio) Audio.init(); }, { once: true });
         if (window.Player && Player.reloadNickname) Player.reloadNickname();
@@ -658,7 +653,7 @@
         });
     }
 
-    // КНОПКИ
+    // ─── КНОПКИ ───────────────────────────────────────────
     if (btnNext) btnNext.addEventListener('click', () => { location.reload(); });
     if (btnRestart) btnRestart.addEventListener('click', () => location.reload());
     if (btnToMap) btnToMap.addEventListener('click', () => { localStorage.removeItem('kz_current_room'); location.href = 'map.html'; });
@@ -684,7 +679,6 @@
         });
     }
 
-    // Кнопка "Продолжить один" (если добавил её в HTML)
     if (btnSoloNext) {
         btnSoloNext.addEventListener('click', () => {
             if (socket && socket.readyState === WebSocket.OPEN) {
@@ -710,5 +704,6 @@
         if (socket && socket.readyState === WebSocket.OPEN) socket.close();
     });
 
+    // ─── СТАРТ ────────────────────────────────────────────
     start();
 })();

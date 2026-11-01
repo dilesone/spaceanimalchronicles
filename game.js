@@ -9,10 +9,11 @@
     // --- СЕТЕВОЕ ПОДКЛЮЧЕНИЕ ---
     let socket = null;
     let myId = null;
-    const otherPlayers = {};
-    const otherNicknames = {}; // Хранилище для ников других игроков
+    
+    // Делаем объекты глобальными для отладки
+    window.otherPlayers = {};
+    window.otherNicknames = {};
 
-    // Создаем элемент для счетчика онлайна
     let onlineElement = document.getElementById('online-count');
     if (!onlineElement) {
         onlineElement = document.createElement('div');
@@ -22,11 +23,9 @@
     }
 
     function connectToServer() {
-        console.log('Попытка подключения к серверу:', SERVER_URL);
         socket = new WebSocket(SERVER_URL);
 
         socket.onopen = () => {
-            console.log('Подключено к серверу!');
             addChatMessage('Система', 'Вы подключены к серверу', true);
         };
 
@@ -46,22 +45,23 @@
                 } 
                 else if (data.type === 'move') {
                     if (data.id !== myId) {
-                        otherPlayers[data.id] = { x: data.x, y: data.y };
-                        otherNicknames[data.id] = data.nickname; // Сохраняем ник
+                        window.otherPlayers[data.id] = { x: data.x, y: data.y };
+                        if (data.nickname) {
+                            window.otherNicknames[data.id] = data.nickname;
+                        }
                     }
                 }
             } catch (e) {
-                console.error('Ошибка парсинга сообщения:', e);
+                console.error('Ошибка парсинга:', e);
             }
         };
 
         socket.onclose = () => {
-            console.log('Отключено от сервера. Переподключение...');
+            console.log('Отключено от сервера. Очистка и переподключение...');
+            // Очищаем данные других игроков, чтобы не было фантомов
+            window.otherPlayers = {};
+            window.otherNicknames = {};
             setTimeout(connectToServer, 3000);
-        };
-        
-        socket.onerror = (err) => {
-            console.error('Ошибка WebSocket:', err);
         };
     }
 
@@ -664,7 +664,7 @@
             updateCamera();
             Tiles.updateParticles();
             
-            // --- ОТПРАВКА КООРДИНАТ (с ID игрока и ником) ---
+            // --- ОТПРАВКА КООРДИНАТ (с ником) ---
             if (socket && socket.readyState === WebSocket.OPEN && myId) {
                 socket.send(JSON.stringify({
                     type: 'move',
@@ -686,9 +686,9 @@
         Player.draw(ctx);
         
         // --- ОТРИСОВКА ДРУГИХ ИГРОКОВ ---
-        for (const id in otherPlayers) {
+        for (const id in window.otherPlayers) {
             if (id === myId) continue;
-            const op = otherPlayers[id];
+            const op = window.otherPlayers[id];
             
             // Красный кружок
             ctx.fillStyle = '#ff0000';
@@ -700,11 +700,11 @@
             ctx.lineWidth = 3;
             ctx.stroke();
             
-            // Никнейм над головой (используем сохраненный ник или ID как запасной вариант)
+            // Никнейм над головой
             ctx.fillStyle = 'white';
             ctx.font = 'bold 14px sans-serif';
             ctx.textAlign = 'center';
-            const displayName = otherNicknames[id] || id;
+            const displayName = window.otherNicknames[id] || id;
             ctx.fillText(displayName, op.x + Player.PHYS.W / 2, op.y - 10);
         }
 
@@ -753,7 +753,14 @@
             updateHUD();
             loop();
 
-            // Запускаем подключение к серверу ТОЛЬКО после загрузки уровня
+            // Закрываем сокет при уходе со страницы
+            window.addEventListener('beforeunload', () => {
+                if (socket && socket.readyState === WebSocket.OPEN) {
+                    socket.close();
+                }
+            });
+
+            // Запускаем подключение к серверу
             connectToServer();
         }).catch(err => {
             console.error('Ошибка загрузки уровня:', err);

@@ -1,7 +1,9 @@
 (() => {
     'use strict';
     
-    // ─── ПОИСК КОМНАТЫ ────────────────────────────────────
+    // ════════════════════════════════════════════════════════════
+    //  УМНЫЙ ПОИСК КОМНАТЫ и СИД
+    // ════════════════════════════════════════════════════════════
     const playMode = localStorage.getItem('kz_play_mode') || 'fixed';
     let roomType = 'fixed';
     let fixedKey = 'forest';
@@ -32,27 +34,27 @@
     }
 
     async function findRoom() {
-        // Если мы уже были в комнате и перезагружаемся для перехода на новый уровень,
-        // возвращаемся в неё же.
+        // Если мы уже были в комнате — возвращаемся в неё
         const savedRoom = localStorage.getItem('kz_current_room');
-        if (savedRoom && serverSeed) {
-            console.log('Возвращаемся в сохраненную комнату:', savedRoom);
+        if (savedRoom) {
+            console.log('Возвращаемся в комнату:', savedRoom);
             return savedRoom;
         }
 
+        // Обычный поиск
         try {
             const query = roomType === 'random' ? 'type=random' : `type=${fixedKey}`;
             const res = await fetch(`${HTTP_URL}/find-room?${query}`);
             const data = await res.json();
             return data.room;
         } catch (e) {
-            console.warn('Сервер не ответил на поиск, создаем локальную комнату:', e);
+            console.warn('Сервер не ответил, создаем локальную комнату:', e);
             return roomType === 'random' ? 'random_fallback' : fixedKey;
         }
     }
 
     function connectToServer(roomName) {
-        localStorage.setItem('kz_current_room', roomName); // Запоминаем комнату
+        localStorage.setItem('kz_current_room', roomName);
         
         const url = myId ? `${BASE_URL}/room/${roomName}?session=${myId}` : `${BASE_URL}/room/${roomName}`;
         socket = new WebSocket(url);
@@ -69,11 +71,11 @@
                     myId = data.id;
                     localStorage.setItem('kz_session_id', myId);
                     
+                    // ПРИШЕЛ СИД - грузим уровень
                     if (data.seed && data.seed !== serverSeed) {
                         serverSeed = data.seed;
-                        localStorage.setItem('kz_server_seed', String(data.seed)); // Сохраняем сид
-                        
                         loadLevelBySeed(serverSeed).then(() => {
+                            // Инициализация игрока
                             Player.state.x = Level.playerStart.x;
                             Player.state.y = Level.playerStart.y;
                             Player.state.vx = 0; Player.state.vy = 0;
@@ -89,7 +91,8 @@
                                 camX = Math.max(0, Math.min(maxX, p.x + Player.PHYS.W / 2 - viewW / 2));
                                 camY = Math.max(0, Math.min(maxY, p.y + Player.PHYS.H / 2 - viewH / 2));
                             } else {
-                                camX = maxX / 2; camY = maxY / 2;
+                                camX = maxX / 2;
+                                camY = maxY / 2;
                             }
 
                             if (!window.__gameActive) {
@@ -117,6 +120,19 @@
                         if (data.nickname) window.otherNicknames[data.id] = data.nickname;
                     }
                 }
+                else if (data.type === 'player_collected') {
+                    // Синхронизация сбора предметов
+                    if (data.id !== myId) {
+                        Level.setTile(data.gx, data.gy, Level.TILE.EMPTY);
+                        if (window.Particles) {
+                            Particles.spawn(
+                                data.gx * Level.tileSize + Level.tileSize / 2,
+                                data.gy * Level.tileSize + Level.tileSize / 2,
+                                '#ffffff', 8, 3
+                            );
+                        }
+                    }
+                }
                 else if (data.type === 'player_finished') {
                     delete window.otherPlayers[data.id];
                     delete window.otherNicknames[data.id];
@@ -134,9 +150,8 @@
                     }
                 }
                 else if (data.type === 'next_level') {
-                    // Сервер говорит переходить. Сохраняем новый сид и перезагружаемся.
-                    localStorage.setItem('kz_force_seed', String(data.seed));
-                    location.reload();
+                    console.log('Переход на новый уровень!');
+                    location.reload(); // При загрузке вернемся в ту же комнату
                 }
             } catch (e) { console.error('Ошибка парсинга:', e); }
         };
@@ -148,7 +163,7 @@
         };
     }
 
-    // ─── ЗАГРУЗКА УРОВНЯ ──────────────────────────────────
+    // ─── ЗАГРУЗКА УРОВНЯ ПО СИДУ ──────────────────────────
     function loadLevelBySeed(seedToUse) {
         const mode = localStorage.getItem('kz_play_mode') || 'fixed';
         let theme = 'forest';
@@ -202,6 +217,7 @@
     const btnWait = document.getElementById('btn-wait');
     const btnLeaveAlone = document.getElementById('btn-leave-alone');
 
+    // Чат
     const chatBox = document.getElementById('chat');
     const chatResizer = document.getElementById('chat-resizer');
     const chatToggle = document.getElementById('chat-toggle');
@@ -230,6 +246,7 @@
     window.addEventListener('resize', resize);
     resize();
 
+    // ─── ЛОГИКА ИГРЫ ──────────────────────────────────────
     function updateHUD() {
         const s = Level.state.collected;
         if (hudBerries) hudBerries.textContent = `${s.berries} / ${Level.state.totalBerries}`;
@@ -254,8 +271,15 @@
         if (!result) return;
         updateHUD();
 
+        // Отправляем на сервер, что мы собрали
         if (socket && socket.readyState === WebSocket.OPEN) {
-            socket.send(JSON.stringify({ type: 'collect', id: myId, gx: gx, gy: gy, itemType: result.type }));
+            socket.send(JSON.stringify({ 
+                type: 'collect', 
+                id: myId, 
+                gx: gx, 
+                gy: gy, 
+                itemType: result.type 
+            }));
         }
 
         if (result.type === 'berry') {
@@ -301,10 +325,19 @@
 
         if (winScreen) {
             winScreen.classList.add('visible');
+            for (let i = 0; i < 5; i++) {
+                setTimeout(() => {
+                    if (window.Particles) {
+                        const px = Level.portal.x + Level.portal.w / 2;
+                        const py = Level.portal.y + Level.portal.h / 2;
+                        Particles.spawn(px, py, ['#a8d8ff', '#ffcc33', '#88ffcc'][i % 3], 20, 6);
+                    }
+                }, i * 100);
+            }
         }
         
         if (btnNext) btnNext.style.display = 'none';
-        if (btnWait) { btnWait.style.display = 'block'; btnWait.textContent = '⏳ Ждать остальных'; btnWait.disabled = false; }
+        if (btnWait) { btnWait.style.display = 'block'; btnWait.textContent = '⏳ Ожидание...'; btnWait.disabled = true; }
     }
 
     const settings = { centerMap: true, followPlayer: false };
@@ -375,6 +408,7 @@
         if (window.Audio) Audio.init();
     }
 
+    // ЧАТ
     const chatOptions = { showTime: false, sound: true, showSystem: true };
     try {
         const saved = JSON.parse(localStorage.getItem('kz_chat') || '{}');
@@ -581,11 +615,9 @@
 
     if (btnWait) {
         btnWait.addEventListener('click', () => {
+            // Кнопка уже неактивна, но на всякий случай
             btnWait.textContent = '⏳ Ожидание...';
             btnWait.disabled = true;
-            if (socket && socket.readyState === WebSocket.OPEN) {
-                socket.send(JSON.stringify({ type: 'ready_to_wait', id: myId }));
-            }
         });
     }
 
@@ -594,7 +626,7 @@
             if (socket && socket.readyState === WebSocket.OPEN) {
                 socket.send(JSON.stringify({ type: 'leave', id: myId }));
             }
-            localStorage.removeItem('kz_current_room'); // Забываем комнату
+            localStorage.removeItem('kz_current_room');
             setTimeout(() => { location.href = 'index.html'; }, 100);
         });
     }

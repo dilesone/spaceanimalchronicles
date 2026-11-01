@@ -34,21 +34,24 @@
     }
 
     async function findRoom() {
-        // Если мы уже были в комнате — возвращаемся в неё
-        const savedRoom = localStorage.getItem('kz_current_room');
-        if (savedRoom) {
-            console.log('Возвращаемся в комнату:', savedRoom);
-            return savedRoom;
+        // 1. Если это перезагрузка после финиша — возвращаемся в ту же комнату
+        const isAfterFinish = sessionStorage.getItem('kz_after_finish');
+        if (isAfterFinish) {
+            sessionStorage.removeItem('kz_after_finish');
+            const savedRoom = localStorage.getItem('kz_current_room');
+            if (savedRoom) {
+                console.log('Переход: возвращаемся в комнату', savedRoom);
+                return savedRoom;
+            }
         }
 
-        // Обычный поиск
+        // 2. Если это новый заход — ищем активную комнату
         try {
             const query = roomType === 'random' ? 'type=random' : `type=${fixedKey}`;
             const res = await fetch(`${HTTP_URL}/find-room?${query}`);
             const data = await res.json();
             return data.room;
         } catch (e) {
-            console.warn('Сервер не ответил, создаем локальную комнату:', e);
             return roomType === 'random' ? 'random_fallback' : fixedKey;
         }
     }
@@ -71,11 +74,9 @@
                     myId = data.id;
                     localStorage.setItem('kz_session_id', myId);
                     
-                    // ПРИШЕЛ СИД - грузим уровень
                     if (data.seed && data.seed !== serverSeed) {
                         serverSeed = data.seed;
                         loadLevelBySeed(serverSeed).then(() => {
-                            // Инициализация игрока
                             Player.state.x = Level.playerStart.x;
                             Player.state.y = Level.playerStart.y;
                             Player.state.vx = 0; Player.state.vy = 0;
@@ -121,7 +122,6 @@
                     }
                 }
                 else if (data.type === 'player_collected') {
-                    // Синхронизация сбора предметов
                     if (data.id !== myId) {
                         Level.setTile(data.gx, data.gy, Level.TILE.EMPTY);
                         if (window.Particles) {
@@ -150,8 +150,9 @@
                     }
                 }
                 else if (data.type === 'next_level') {
-                    console.log('Переход на новый уровень!');
-                    location.reload(); // При загрузке вернемся в ту же комнату
+                    // Ставим флаг, что это переход, чтобы вернуться в ту же комнату
+                    sessionStorage.setItem('kz_after_finish', '1');
+                    location.reload();
                 }
             } catch (e) { console.error('Ошибка парсинга:', e); }
         };
@@ -246,7 +247,6 @@
     window.addEventListener('resize', resize);
     resize();
 
-    // ─── ЛОГИКА ИГРЫ ──────────────────────────────────────
     function updateHUD() {
         const s = Level.state.collected;
         if (hudBerries) hudBerries.textContent = `${s.berries} / ${Level.state.totalBerries}`;
@@ -271,15 +271,8 @@
         if (!result) return;
         updateHUD();
 
-        // Отправляем на сервер, что мы собрали
         if (socket && socket.readyState === WebSocket.OPEN) {
-            socket.send(JSON.stringify({ 
-                type: 'collect', 
-                id: myId, 
-                gx: gx, 
-                gy: gy, 
-                itemType: result.type 
-            }));
+            socket.send(JSON.stringify({ type: 'collect', id: myId, gx: gx, gy: gy, itemType: result.type }));
         }
 
         if (result.type === 'berry') {
@@ -325,15 +318,6 @@
 
         if (winScreen) {
             winScreen.classList.add('visible');
-            for (let i = 0; i < 5; i++) {
-                setTimeout(() => {
-                    if (window.Particles) {
-                        const px = Level.portal.x + Level.portal.w / 2;
-                        const py = Level.portal.y + Level.portal.h / 2;
-                        Particles.spawn(px, py, ['#a8d8ff', '#ffcc33', '#88ffcc'][i % 3], 20, 6);
-                    }
-                }, i * 100);
-            }
         }
         
         if (btnNext) btnNext.style.display = 'none';
@@ -615,7 +599,6 @@
 
     if (btnWait) {
         btnWait.addEventListener('click', () => {
-            // Кнопка уже неактивна, но на всякий случай
             btnWait.textContent = '⏳ Ожидание...';
             btnWait.disabled = true;
         });

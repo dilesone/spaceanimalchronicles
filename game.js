@@ -6,6 +6,32 @@
     // ════════════════════════════════════════════════════════════
     const SERVER_URL = "wss://pdlemclcsgnw-production-uigv4qgi.us-central1.suga.run";
 
+    // --- СЕТЕВОЕ ПОДКЛЮЧЕНИЕ ---
+    let socket = null;
+
+    function connectToServer() {
+        socket = new WebSocket(SERVER_URL);
+
+        socket.onopen = () => {
+            console.log('Подключено к серверу!');
+            addChatMessage('Система', 'Вы подключены к серверу', true);
+        };
+
+        socket.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                if (data.type === 'chat') {
+                    addChatMessage(data.author, data.text);
+                }
+            } catch (e) {}
+        };
+
+        socket.onclose = () => {
+            console.log('Отключено от сервера. Переподключение...');
+            setTimeout(connectToServer, 3000);
+        };
+    }
+
     // ─── DOM ──────────────────────────────────────────────
     const canvas = document.getElementById('c');
     const ctx = canvas.getContext('2d');
@@ -347,6 +373,15 @@
         if (!chatInput) return;
         const text = (chatInput.value || '').trim();
         if (!text) return;
+        
+        if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({
+                type: 'chat',
+                author: Player.state.nickname || 'Игрок',
+                text: text
+            }));
+        }
+        
         addChatMessage(Player.state.nickname || 'Игрок', text);
         chatInput.value = '';
     }
@@ -693,5 +728,8 @@
         }
     });
 
+    // Запускаем подключение к серверу
+    connectToServer();
+    
     start();
 })();

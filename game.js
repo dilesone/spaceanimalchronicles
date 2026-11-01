@@ -34,7 +34,7 @@
     }
 
     async function findRoom() {
-        // 1. Если это перезагрузка после финиша — возвращаемся в ту же комнату
+        // 1. ПЕРЕХОД ПОСЛЕ ФИНИША — возвращаемся в ту же комнату
         const isAfterFinish = sessionStorage.getItem('kz_after_finish');
         if (isAfterFinish) {
             sessionStorage.removeItem('kz_after_finish');
@@ -45,15 +45,28 @@
             }
         }
 
-        // 2. Если это новый заход — ищем активную комнату
+        // 2. ПОИСК АКТИВНОЙ КОМНАТЫ
         try {
             const query = roomType === 'random' ? 'type=random' : `type=${fixedKey}`;
             const res = await fetch(`${HTTP_URL}/find-room?${query}`);
             const data = await res.json();
-            return data.room;
+            
+            if (data.room) {
+                console.log('Найдена активная комната:', data.room);
+                return data.room;
+            }
         } catch (e) {
-            return roomType === 'random' ? 'random_fallback' : fixedKey;
+            console.warn('Ошибка поиска:', e);
         }
+
+        // 3. СОЗДАНИЕ НОВОЙ КОМНАТЫ
+        if (roomType === 'random') {
+            const newRoom = 'random_' + Math.random().toString(36).substring(2, 8);
+            console.log('Создаём новую комнату:', newRoom);
+            return newRoom;
+        }
+        
+        return fixedKey;
     }
 
     function connectToServer(roomName) {
@@ -124,13 +137,11 @@
                 else if (data.type === 'player_collected') {
                     if (data.id !== myId) {
                         Level.setTile(data.gx, data.gy, Level.TILE.EMPTY);
-                        if (window.Particles) {
-                            Particles.spawn(
-                                data.gx * Level.tileSize + Level.tileSize / 2,
-                                data.gy * Level.tileSize + Level.tileSize / 2,
-                                '#ffffff', 8, 3
-                            );
-                        }
+                        if (window.Particles) Particles.spawn(
+                            data.gx * Level.tileSize + Level.tileSize / 2,
+                            data.gy * Level.tileSize + Level.tileSize / 2,
+                            '#ffffff', 8, 3
+                        );
                     }
                 }
                 else if (data.type === 'player_finished') {
@@ -150,11 +161,10 @@
                     }
                 }
                 else if (data.type === 'next_level') {
-                    // Ставим флаг, что это переход, чтобы вернуться в ту же комнату
                     sessionStorage.setItem('kz_after_finish', '1');
                     location.reload();
                 }
-            } catch (e) { console.error('Ошибка парсинга:', e); }
+            } catch (e) { console.error('Ошибка:', e); }
         };
 
         socket.onclose = () => {
@@ -164,7 +174,7 @@
         };
     }
 
-    // ─── ЗАГРУЗКА УРОВНЯ ПО СИДУ ──────────────────────────
+    // ─── ЗАГРУЗКА УРОВНЯ ──────────────────────────────────
     function loadLevelBySeed(seedToUse) {
         const mode = localStorage.getItem('kz_play_mode') || 'fixed';
         let theme = 'forest';
@@ -181,15 +191,9 @@
         }
 
         return Level.loadRandom({
-            theme: theme,
-            difficulty: 'normal',
-            seed: seedToUse,
-            totalBerries: 6,
-            totalCrystals: 4,
-            totalNuts: 1,
-            width: 40,
-            height: 40,
-            terrain: 'ground'
+            theme: theme, difficulty: 'normal', seed: seedToUse,
+            totalBerries: 6, totalCrystals: 4, totalNuts: 1,
+            width: 40, height: 40, terrain: 'ground'
         });
     }
 
@@ -316,10 +320,7 @@
             `;
         }
 
-        if (winScreen) {
-            winScreen.classList.add('visible');
-        }
-        
+        if (winScreen) winScreen.classList.add('visible');
         if (btnNext) btnNext.style.display = 'none';
         if (btnWait) { btnWait.style.display = 'block'; btnWait.textContent = '⏳ Ожидание...'; btnWait.disabled = true; }
     }

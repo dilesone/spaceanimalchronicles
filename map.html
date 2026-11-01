@@ -192,7 +192,6 @@
 <script src="menu.js"></script>
 <script>
     (() => {
-        // Данные о локациях
         const LOCATIONS = [
             {
                 key: 'forest',
@@ -201,7 +200,7 @@
                 desc: 'Зелёная чаща<br>с ягодами и кристаллами',
                 theme: 'forest',
                 type: 'fixed',
-                unlockAfter: null // доступно сразу
+                unlockAfter: null
             },
             {
                 key: 'desert',
@@ -210,7 +209,7 @@
                 desc: 'Бескрайние пески<br>и жаркое солнце',
                 theme: 'desert',
                 type: 'fixed',
-                unlockAfter: 'forest' // открывается после леса
+                unlockAfter: 'forest'
             },
             {
                 key: 'mountains',
@@ -219,7 +218,7 @@
                 desc: 'Снежные вершины<br>и головокружительные обрывы',
                 theme: 'mountains',
                 type: 'fixed',
-                unlockAfter: 'desert' // открывается после пустыни
+                unlockAfter: 'desert'
             },
             {
                 key: 'dungeon',
@@ -228,7 +227,7 @@
                 desc: 'Тёмные пещеры<br>и забытые сокровища',
                 theme: 'dungeon',
                 type: 'fixed',
-                unlockAfter: 'mountains' // открывается после гор
+                unlockAfter: 'mountains'
             },
             {
                 key: 'random',
@@ -240,19 +239,15 @@
             }
         ];
 
-        // Загружаем прогресс
         function loadProgress() {
             try {
-                const saved = JSON.parse(localStorage.getItem('kz_progress') || '{}');
-                return saved;
+                return JSON.parse(localStorage.getItem('kz_progress') || '{}');
             } catch (e) { return {}; }
         }
 
-        // Проверяем, разблокирована ли локация
         function isUnlocked(loc, progress) {
-            if (loc.isRandom) return true; // случайный мир всегда доступен
-            if (loc.unlockAfter === null) return true; // лес всегда доступен
-            // Разблокировано, если пройдена предыдущая локация
+            if (loc.isRandom) return true;
+            if (loc.unlockAfter === null) return true;
             return progress[loc.unlockAfter] === true;
         }
 
@@ -282,15 +277,16 @@
                     el.style.transform = 'scale(0.95)';
                     el.style.opacity = '0.6';
 
+                    // ОЧИЩАЕМ ТЕКУЩУЮ КОМНАТУ, чтобы игра искала/создавала новую
+                    localStorage.removeItem('kz_current_room');
+
                     if (loc.type === 'fixed') {
-                        // Фиксированная локация (лес, пустыня, горы, подземелья)
                         localStorage.setItem('kz_play_mode', 'fixed');
                         localStorage.setItem('kz_play_key', loc.key);
                         localStorage.setItem('kz_play_theme', loc.theme);
                         localStorage.removeItem('kz_random_seed');
                         localStorage.removeItem('kz_editor_level');
                     } else if (loc.type === 'random') {
-                        // Случайный мир
                         const seed = Math.floor(Math.random() * 1e9);
                         localStorage.setItem('kz_random_seed', String(seed));
                         localStorage.setItem('kz_play_mode', 'random');

@@ -8,6 +8,17 @@
 
     // --- СЕТЕВОЕ ПОДКЛЮЧЕНИЕ ---
     let socket = null;
+    let myId = null;
+    const otherPlayers = {};
+
+    // Создаем элемент для счетчика онлайна
+    let onlineElement = document.getElementById('online-count');
+    if (!onlineElement) {
+        onlineElement = document.createElement('div');
+        onlineElement.id = 'online-count';
+        onlineElement.style.cssText = 'position:fixed; top:10px; right:10px; color:white; background:rgba(0,0,0,0.5); padding:5px; z-index:9999; font-family:sans-serif; border-radius:4px;';
+        document.body.appendChild(onlineElement);
+    }
 
     function connectToServer() {
         console.log('Попытка подключения к серверу:', SERVER_URL);
@@ -21,8 +32,21 @@
         socket.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
-                if (data.type === 'chat') {
+                
+                if (data.type === 'init') {
+                    myId = data.id;
+                    console.log('Мой ID:', myId);
+                } 
+                else if (data.type === 'online') {
+                    onlineElement.textContent = `Онлайн: ${data.count}`;
+                }
+                else if (data.type === 'chat') {
                     addChatMessage(data.author, data.text);
+                } 
+                else if (data.type === 'move') {
+                    if (data.id !== myId) {
+                        otherPlayers[data.id] = { x: data.x, y: data.y };
+                    }
                 }
             } catch (e) {
                 console.error('Ошибка парсинга сообщения:', e);
@@ -328,7 +352,6 @@
         });
     }
 
-    // ВАЖНО: Используем var, чтобы избежать ошибки инициализации при подключении
     var chatHistory = [];
 
     function addChatMessage(author, text, isSystem = false) {
@@ -387,8 +410,6 @@
                 author: Player.state.nickname || 'Игрок',
                 text: text
             }));
-        } else {
-            console.warn('Сокет не подключен, сообщение не отправлено');
         }
         
         addChatMessage(Player.state.nickname || 'Игрок', text);
@@ -640,6 +661,16 @@
             checkPortal();
             updateCamera();
             Tiles.updateParticles();
+            
+            // --- ОТПРАВКА КООРДИНАТ (с ID игрока) ---
+            if (socket && socket.readyState === WebSocket.OPEN && myId) {
+                socket.send(JSON.stringify({
+                    type: 'move',
+                    id: myId,
+                    x: Player.state.x,
+                    y: Player.state.y
+                }));
+            }
         }
 
         Tiles.drawBackground(ctx, viewW, viewH, camX, camY);
@@ -650,6 +681,24 @@
         Tiles.drawLevel(ctx, camX, camY, viewW, viewH);
         Tiles.drawParticles(ctx);
         Player.draw(ctx);
+        
+        // --- ОТРИСОВКА ДРУГИХ ИГРОКОВ ---
+        for (const id in otherPlayers) {
+            if (id === myId) continue;
+            const op = otherPlayers[id];
+            
+            // Красный кружок
+            ctx.fillStyle = '#ff5070';
+            ctx.beginPath();
+            ctx.arc(op.x + Player.PHYS.W / 2, op.y + Player.PHYS.H / 2, 15, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Никнейм или ID над головой
+            ctx.fillStyle = 'white';
+            ctx.font = '12px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(id, op.x + Player.PHYS.W / 2, op.y - 5);
+        }
 
         ctx.restore();
 

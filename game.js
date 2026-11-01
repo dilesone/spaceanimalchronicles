@@ -166,41 +166,12 @@
                 else if (data.type === 'next_level') {
                     console.log('Переход на новый уровень!');
                     
-                    Level.state.collected = data.collected || { berries: 0, crystals: 0, nuts: 0 };
-                    Level.state.personal = data.personal || { berries: 0, crystals: 0, nuts: 0 };
+                    // Сохраняем флаг, что это переход, и комнату
+                    sessionStorage.setItem('kz_after_finish', '1');
+                    localStorage.setItem('kz_current_room', roomName);
                     
-                    loadLevelBySeed(data.seed).then(() => {
-                        Player.state.x = Level.playerStart.x;
-                        Player.state.y = Level.playerStart.y;
-                        Player.state.vx = 0;
-                        Player.state.vy = 0;
-                        Player.state.hasNut = false;
-                        Player.state.lives = Player.state.maxLives;
-                        
-                        const maxX = Level.pixelWidth() - viewW;
-                        const maxY = Level.pixelHeight() - viewH;
-                        if (settings.followPlayer) {
-                            const p = Player.state;
-                            camX = Math.max(0, Math.min(maxX, p.x + Player.PHYS.W / 2 - viewW / 2));
-                            camY = Math.max(0, Math.min(maxY, p.y + Player.PHYS.H / 2 - viewH / 2));
-                        } else {
-                            camX = maxX / 2;
-                            camY = maxY / 2;
-                        }
-                        
-                        if (winScreen) winScreen.classList.remove('visible');
-                        if (document.getElementById('wait-timer')) {
-                            document.getElementById('wait-timer').remove();
-                        }
-                        if (btnWait) btnWait.style.display = 'none';
-                        
-                        updateHUD();
-                        
-                        window.__gameActive = true;
-                        paused = false;
-                        isLoopRunning = false;
-                        loop(); // перезапуск
-                    });
+                    // Перезагружаем страницу (чистое состояние)
+                    location.reload();
                 }
             } catch (e) { console.error('Ошибка:', e); }
         };
@@ -240,8 +211,7 @@
             terrain: 'ground'
         });
     }
-
-    // ─── DOM ──────────────────────────────────────────────
+        // ─── DOM ──────────────────────────────────────────────
     const canvas = document.getElementById('c');
     const ctx = canvas.getContext('2d');
     const hudBerries = document.getElementById('hud-berries');

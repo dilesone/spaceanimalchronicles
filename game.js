@@ -10,6 +10,7 @@
     let socket = null;
     let myId = null;
     const otherPlayers = {};
+    const otherNicknames = {}; // Хранилище для ников других игроков
 
     // Создаем элемент для счетчика онлайна
     let onlineElement = document.getElementById('online-count');
@@ -46,6 +47,7 @@
                 else if (data.type === 'move') {
                     if (data.id !== myId) {
                         otherPlayers[data.id] = { x: data.x, y: data.y };
+                        otherNicknames[data.id] = data.nickname; // Сохраняем ник
                     }
                 }
             } catch (e) {
@@ -662,11 +664,12 @@
             updateCamera();
             Tiles.updateParticles();
             
-            // --- ОТПРАВКА КООРДИНАТ (с ID игрока) ---
+            // --- ОТПРАВКА КООРДИНАТ (с ID игрока и ником) ---
             if (socket && socket.readyState === WebSocket.OPEN && myId) {
                 socket.send(JSON.stringify({
                     type: 'move',
                     id: myId,
+                    nickname: Player.state.nickname || 'Игрок',
                     x: Player.state.x,
                     y: Player.state.y
                 }));
@@ -688,16 +691,21 @@
             const op = otherPlayers[id];
             
             // Красный кружок
-            ctx.fillStyle = '#ff5070';
+            ctx.fillStyle = '#ff0000';
             ctx.beginPath();
-            ctx.arc(op.x + Player.PHYS.W / 2, op.y + Player.PHYS.H / 2, 15, 0, Math.PI * 2);
+            ctx.arc(op.x + Player.PHYS.W / 2, op.y + Player.PHYS.H / 2, 20, 0, Math.PI * 2);
             ctx.fill();
             
-            // Никнейм или ID над головой
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            
+            // Никнейм над головой (используем сохраненный ник или ID как запасной вариант)
             ctx.fillStyle = 'white';
-            ctx.font = '12px sans-serif';
+            ctx.font = 'bold 14px sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillText(id, op.x + Player.PHYS.W / 2, op.y - 5);
+            const displayName = otherNicknames[id] || id;
+            ctx.fillText(displayName, op.x + Player.PHYS.W / 2, op.y - 10);
         }
 
         ctx.restore();

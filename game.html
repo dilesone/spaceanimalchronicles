@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Лес — Космические Хроники Зверьков</title>
+<title>Космические Хроники Зверьков</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -37,6 +37,11 @@
     <div class="hud-item portal">
         <span class="label">Портал</span>
         <span class="value" id="hud-portal">ЗАКРЫТ</span>
+    </div>
+    <!-- ЛИЧНЫЙ СЧЕТЧИК -->
+    <div class="hud-item" style="background: rgba(100, 255, 200, 0.1); border-color: rgba(100, 255, 200, 0.3);">
+        <span class="icon">👤</span>
+        <span class="value" id="hud-personal" style="color: #88ffcc;">0</span>
     </div>
 </div>
 
@@ -96,7 +101,7 @@
         <div class="stats-block" id="win-stats"></div>
         
         <div class="buttons">
-            <button class="menu-btn" id="btn-wait">⏳ Ждать остальных</button>
+            <button class="menu-btn" id="btn-wait">⏳ Ожидание...</button>
             <button class="menu-btn" id="btn-leave-alone">🚪 Уйти одному (в меню)</button>
             <button class="menu-btn" id="btn-next" style="display: none;">🎲 Следующий уровень</button>
         </div>
@@ -135,6 +140,18 @@
                 </label>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- ═══════════════ МОБИЛЬНОЕ УПРАВЛЕНИЕ ═══════════════ -->
+<div id="mobile-controls" class="mobile-controls">
+    <div class="dpad">
+        <button class="ctrl-btn" id="btn-left">◀</button>
+        <button class="ctrl-btn" id="btn-right">▶</button>
+    </div>
+    <div class="action-btns">
+        <button class="ctrl-btn action-btn" id="btn-dash">DASH</button>
+        <button class="ctrl-btn action-btn" id="btn-jump">JUMP</button>
     </div>
 </div>
 

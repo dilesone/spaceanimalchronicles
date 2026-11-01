@@ -34,7 +34,7 @@
     }
 
     async function findRoom() {
-        // 1. ПЕРЕХОД ПОСЛЕ ФИНИША — возвращаемся в ту же комнату
+        // 1. ПЕРЕХОД ПОСЛЕ ФИНИША — возвращаемся в ту же комнату (через sessionStorage)
         const isAfterFinish = sessionStorage.getItem('kz_after_finish');
         if (isAfterFinish) {
             sessionStorage.removeItem('kz_after_finish');
@@ -42,21 +42,16 @@
             if (savedRoom) return savedRoom;
         }
 
-        // 2. ПОИСК АКТИВНОЙ КОМНАТЫ
+        // 2. ПОИСК АКТИВНОЙ КОМНАТЫ (или создание новой на сервере)
         try {
             const query = roomType === 'random' ? 'type=random' : `type=${fixedKey}`;
             const res = await fetch(`${HTTP_URL}/find-room?${query}`);
             const data = await res.json();
-            if (data.room) return data.room;
+            return data.room;
         } catch (e) {
             console.warn('Ошибка поиска:', e);
+            return roomType === 'random' ? 'random_fallback' : fixedKey;
         }
-
-        // 3. СОЗДАНИЕ НОВОЙ КОМНАТЫ
-        if (roomType === 'random') {
-            return 'random_' + Math.random().toString(36).substring(2, 8);
-        }
-        return fixedKey;
     }
 
     function connectToServer(roomName) {
@@ -87,7 +82,6 @@
                             Player.state.lives = Player.state.maxLives;
                             Player.bindKeys();
                             
-                            // Применяем общий и личный прогресс
                             if (data.collected) Level.state.collected = data.collected;
                             if (data.personal) Level.state.personal = data.personal;
                             updateHUD();
@@ -129,20 +123,33 @@
                     }
                 }
                 else if (data.type === 'player_collected') {
-                    // Удаляем предмет у всех
-                    Level.setTile(data.gx, data.gy, Level.TILE.EMPTY);
-                    if (window.Particles) {
-                        Particles.spawn(
-                            data.gx * Level.tileSize + Level.tileSize / 2,
-                            data.gy * Level.tileSize + Level.tileSize / 2,
-                            '#ffffff', 8, 3
-                        );
+                    const itemType = data.itemType;
+                    
+                    // Ягоды и кристаллы — удаляем у всех
+                    if (itemType === 'berry' || itemType === 'crystal') {
+                        Level.setTile(data.gx, data.gy, Level.TILE.EMPTY);
+                        if (window.Particles) {
+                            Particles.spawn(
+                                data.gx * Level.tileSize + Level.tileSize / 2,
+                                data.gy * Level.tileSize + Level.tileSize / 2,
+                                itemType === 'berry' ? '#ff5070' : '#a8d8ff', 8, 3
+                            );
+                        }
+                    }
+                    
+                    // Орех — удаляем ТОЛЬКО У СЕБЯ, если это я его взял
+                    if (itemType === 'nut') {
+                        if (data.id === myId) {
+                            Level.setTile(data.gx, data.gy, Level.TILE.EMPTY);
+                            Player.state.hasNut = true;
+                        }
+                        // У других орех НЕ удаляется (они могут взять его позже)
                     }
                     
                     // Обновляем общий прогресс
                     if (data.collected) Level.state.collected = data.collected;
                     
-                    // Если это Я собрал — обновляем личный
+                    // Если это я собрал — обновляем личный
                     if (data.id === myId && data.personal) {
                         Level.state.personal = data.personal;
                     }
@@ -166,10 +173,43 @@
                     }
                 }
                 else if (data.type === 'next_level') {
-                    if (data.collected) Level.state.collected = data.collected;
-                    if (data.personal) Level.state.personal = data.personal;
-                    sessionStorage.setItem('kz_after_finish', '1');
-                    location.reload();
+                    // НЕ перезагружаем страницу, а генерируем новый уровень на месте
+                    console.log('Переход на новый уровень!');
+                    
+                    // Сбрасываем прогресс
+                    Level.state.collected = data.collected || { berries: 0, crystals: 0, nuts: 0 };
+                    Level.state.personal = data.personal || { berries: 0, crystals: 0, nuts: 0 };
+                    
+                    loadLevelBySeed(data.seed).then(() => {
+                        Player.state.x = Level.playerStart.x;
+                        Player.state.y = Level.playerStart.y;
+                        Player.state.vx = 0;
+                        Player.state.vy = 0;
+                        Player.state.hasNut = false;
+                        Player.state.lives = Player.state.maxLives;
+                        
+                        const maxX = Level.pixelWidth() - viewW;
+                        const maxY = Level.pixelHeight() - viewH;
+                        if (settings.followPlayer) {
+                            const p = Player.state;
+                            camX = Math.max(0, Math.min(maxX, p.x + Player.PHYS.W / 2 - viewW / 2));
+                            camY = Math.max(0, Math.min(maxY, p.y + Player.PHYS.H / 2 - viewH / 2));
+                        } else {
+                            camX = maxX / 2;
+                            camY = maxY / 2;
+                        }
+                        
+                        // Скрываем экран победы
+                        if (winScreen) winScreen.classList.remove('visible');
+                        if (document.getElementById('wait-timer')) {
+                            document.getElementById('wait-timer').remove();
+                        }
+                        if (btnWait) btnWait.style.display = 'none';
+                        
+                        updateHUD();
+                        window.__gameActive = true;
+                        paused = false;
+                    });
                 }
             } catch (e) { console.error('Ошибка:', e); }
         };
@@ -198,9 +238,15 @@
         }
 
         return Level.loadRandom({
-            theme: theme, difficulty: 'normal', seed: seedToUse,
-            totalBerries: 6, totalCrystals: 4, totalNuts: 1,
-            width: 40, height: 40, terrain: 'ground'
+            theme: theme,
+            difficulty: 'normal',
+            seed: seedToUse,
+            totalBerries: 12,    // Больше ягод
+            totalCrystals: 8,    // Больше кристаллов
+            totalNuts: 1,        // Один орех
+            width: 40,
+            height: 40,
+            terrain: 'ground'
         });
     }
 
@@ -212,7 +258,7 @@
     const hudNuts = document.getElementById('hud-nuts');
     const hudLives = document.getElementById('hud-lives');
     const hudPortal = document.getElementById('hud-portal');
-    const hudPersonal = document.getElementById('hud-personal'); // ДОБАВИТЬ В HTML
+    const hudPersonal = document.getElementById('hud-personal');
     const winScreen = document.getElementById('win-screen');
     const winStats = document.getElementById('win-stats');
     const pauseScreen = document.getElementById('pause-screen');
@@ -229,6 +275,7 @@
     const pauseNickname = document.getElementById('pause-nickname');
     const btnWait = document.getElementById('btn-wait');
     const btnLeaveAlone = document.getElementById('btn-leave-alone');
+    const btnSoloNext = document.getElementById('btn-solo-next');
 
     // Чат
     const chatBox = document.getElementById('chat');
@@ -273,7 +320,7 @@
             hudPersonal.textContent = `${totalPersonal}`;
         }
 
-        // Открытие портала по общему прогрессу
+        // Портал открывается по ОБЩЕМУ счету
         const totalNeeded = Level.state.totalBerries + Level.state.totalCrystals;
         const totalCollected = s.berries + s.crystals;
         portalOpen = totalCollected >= totalNeeded / 2;
@@ -634,6 +681,18 @@
             }
             localStorage.removeItem('kz_current_room');
             setTimeout(() => { location.href = 'index.html'; }, 100);
+        });
+    }
+
+    // Кнопка "Продолжить один" (если добавил её в HTML)
+    if (btnSoloNext) {
+        btnSoloNext.addEventListener('click', () => {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({ type: 'leave', id: myId }));
+            }
+            localStorage.removeItem('kz_current_room');
+            sessionStorage.removeItem('kz_after_finish');
+            location.reload();
         });
     }
 

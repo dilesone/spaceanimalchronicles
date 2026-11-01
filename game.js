@@ -45,7 +45,12 @@
                 } 
                 else if (data.type === 'move') {
                     if (data.id !== myId) {
-                        window.otherPlayers[data.id] = { x: data.x, y: data.y };
+                        // СТРОКА НИЖЕ ВАЖНА: сохраняем время получения пакета (lastUpdate)
+                        window.otherPlayers[data.id] = { 
+                            x: data.x, 
+                            y: data.y,
+                            lastUpdate: Date.now() 
+                        };
                         if (data.nickname) {
                             window.otherNicknames[data.id] = data.nickname;
                         }
@@ -58,7 +63,6 @@
 
         socket.onclose = () => {
             console.log('Отключено от сервера. Очистка и переподключение...');
-            // Очищаем данные других игроков, чтобы не было фантомов
             window.otherPlayers = {};
             window.otherNicknames = {};
             setTimeout(connectToServer, 3000);
@@ -685,10 +689,18 @@
         Tiles.drawParticles(ctx);
         Player.draw(ctx);
         
-        // --- ОТРИСОВКА ДРУГИХ ИГРОКОВ ---
+        // --- ОТРИСОВКА ДРУГИХ ИГРОКОВ И ОЧИСТКА ФАНТОМОВ ---
+        const now = Date.now();
         for (const id in window.otherPlayers) {
             if (id === myId) continue;
             const op = window.otherPlayers[id];
+            
+            // УДАЛЕНИЕ ФАНТОМА: если нет данных больше 2.5 сек
+            if (!op.lastUpdate || now - op.lastUpdate > 2500) {
+                delete window.otherPlayers[id];
+                delete window.otherNicknames[id];
+                continue;
+            }
             
             // Красный кружок
             ctx.fillStyle = '#ff0000';

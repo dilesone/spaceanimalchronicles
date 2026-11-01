@@ -39,10 +39,7 @@
         if (isAfterFinish) {
             sessionStorage.removeItem('kz_after_finish');
             const savedRoom = localStorage.getItem('kz_current_room');
-            if (savedRoom) {
-                console.log('Переход: возвращаемся в комнату', savedRoom);
-                return savedRoom;
-            }
+            if (savedRoom) return savedRoom;
         }
 
         // 2. ПОИСК АКТИВНОЙ КОМНАТЫ
@@ -50,22 +47,15 @@
             const query = roomType === 'random' ? 'type=random' : `type=${fixedKey}`;
             const res = await fetch(`${HTTP_URL}/find-room?${query}`);
             const data = await res.json();
-            
-            if (data.room) {
-                console.log('Найдена активная комната:', data.room);
-                return data.room;
-            }
+            if (data.room) return data.room;
         } catch (e) {
             console.warn('Ошибка поиска:', e);
         }
 
         // 3. СОЗДАНИЕ НОВОЙ КОМНАТЫ
         if (roomType === 'random') {
-            const newRoom = 'random_' + Math.random().toString(36).substring(2, 8);
-            console.log('Создаём новую комнату:', newRoom);
-            return newRoom;
+            return 'random_' + Math.random().toString(36).substring(2, 8);
         }
-        
         return fixedKey;
     }
 
@@ -96,6 +86,10 @@
                             Player.state.hasNut = false;
                             Player.state.lives = Player.state.maxLives;
                             Player.bindKeys();
+                            
+                            // Применяем общий и личный прогресс
+                            if (data.collected) Level.state.collected = data.collected;
+                            if (data.personal) Level.state.personal = data.personal;
                             updateHUD();
                             
                             const maxX = Level.pixelWidth() - viewW;
@@ -135,14 +129,25 @@
                     }
                 }
                 else if (data.type === 'player_collected') {
-                    if (data.id !== myId) {
-                        Level.setTile(data.gx, data.gy, Level.TILE.EMPTY);
-                        if (window.Particles) Particles.spawn(
+                    // Удаляем предмет у всех
+                    Level.setTile(data.gx, data.gy, Level.TILE.EMPTY);
+                    if (window.Particles) {
+                        Particles.spawn(
                             data.gx * Level.tileSize + Level.tileSize / 2,
                             data.gy * Level.tileSize + Level.tileSize / 2,
                             '#ffffff', 8, 3
                         );
                     }
+                    
+                    // Обновляем общий прогресс
+                    if (data.collected) Level.state.collected = data.collected;
+                    
+                    // Если это Я собрал — обновляем личный
+                    if (data.id === myId && data.personal) {
+                        Level.state.personal = data.personal;
+                    }
+                    
+                    updateHUD();
                 }
                 else if (data.type === 'player_finished') {
                     delete window.otherPlayers[data.id];
@@ -161,6 +166,8 @@
                     }
                 }
                 else if (data.type === 'next_level') {
+                    if (data.collected) Level.state.collected = data.collected;
+                    if (data.personal) Level.state.personal = data.personal;
                     sessionStorage.setItem('kz_after_finish', '1');
                     location.reload();
                 }
@@ -205,6 +212,7 @@
     const hudNuts = document.getElementById('hud-nuts');
     const hudLives = document.getElementById('hud-lives');
     const hudPortal = document.getElementById('hud-portal');
+    const hudPersonal = document.getElementById('hud-personal'); // ДОБАВИТЬ В HTML
     const winScreen = document.getElementById('win-screen');
     const winStats = document.getElementById('win-stats');
     const pauseScreen = document.getElementById('pause-screen');
@@ -252,13 +260,24 @@
     resize();
 
     function updateHUD() {
-        const s = Level.state.collected;
+        const s = Level.state.collected; // ОБЩИЙ
+        const p = Level.state.personal || { berries: 0, crystals: 0, nuts: 0 }; // ЛИЧНЫЙ
+
         if (hudBerries) hudBerries.textContent = `${s.berries} / ${Level.state.totalBerries}`;
         if (hudCrystals) hudCrystals.textContent = `${s.crystals} / ${Level.state.totalCrystals}`;
         if (hudNuts) hudNuts.textContent = `${s.nuts} / ${Level.state.totalNuts}`;
         if (hudLives) hudLives.textContent = '❤️'.repeat(Math.max(0, Player.state.lives));
 
-        portalOpen = Level.isPortalOpen();
+        if (hudPersonal) {
+            const totalPersonal = p.berries + p.crystals + p.nuts;
+            hudPersonal.textContent = `${totalPersonal}`;
+        }
+
+        // Открытие портала по общему прогрессу
+        const totalNeeded = Level.state.totalBerries + Level.state.totalCrystals;
+        const totalCollected = s.berries + s.crystals;
+        portalOpen = totalCollected >= totalNeeded / 2;
+
         if (hudPortal) {
             hudPortal.textContent = portalOpen ? 'ОТКРЫТ' : 'ЗАКРЫТ';
             hudPortal.style.color = portalOpen ? '#00e676' : '#ff7088';
@@ -273,8 +292,8 @@
 
         const result = Level.collectAt(gx, gy);
         if (!result) return;
-        updateHUD();
 
+        // Отправляем на сервер, НЕ увеличиваем счетчики локально
         if (socket && socket.readyState === WebSocket.OPEN) {
             socket.send(JSON.stringify({ type: 'collect', id: myId, gx: gx, gy: gy, itemType: result.type }));
         }
@@ -312,11 +331,14 @@
         }
 
         const s = Level.state.collected;
+        const p = Level.state.personal || { berries: 0, crystals: 0, nuts: 0 };
+        
         if (winStats) {
             winStats.innerHTML = `
-                <div class="stat-row"><span>🍓 Ягоды</span><b>${s.berries} / ${Level.state.totalBerries}</b></div>
-                <div class="stat-row"><span>💎 Кристаллы</span><b>${s.crystals} / ${Level.state.totalCrystals}</b></div>
-                <div class="stat-row"><span>🌰 Орехи</span><b>${s.nuts} / ${Level.state.totalNuts}</b></div>
+                <div class="stat-row"><span>🍓 Ягоды (общие)</span><b>${s.berries} / ${Level.state.totalBerries}</b></div>
+                <div class="stat-row"><span>💎 Кристаллы (общие)</span><b>${s.crystals} / ${Level.state.totalCrystals}</b></div>
+                <div class="stat-row"><span>🌰 Орехи (общие)</span><b>${s.nuts} / ${Level.state.totalNuts}</b></div>
+                <div class="stat-row" style="margin-top:10px; border-top:1px solid #444; padding-top:10px;"><span>👤 Личный вклад</span><b>${p.berries + p.crystals + p.nuts}</b></div>
             `;
         }
 

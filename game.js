@@ -4,7 +4,7 @@
     // ════════════════════════════════════════════════════════════
     //  СЕТЕВОЙ АДРЕС СЕРВЕРА (для мультиплеера)
     // ════════════════════════════════════════════════════════════
-    const SERVER_URL = "wss://cf-game-server.твой-ник.workers.dev/room/forest";
+    const SERVER_URL = "https://pdlemclcsgnw-production-uigv4qgi.us-central1.suga.run";
 
     // ─── DOM ──────────────────────────────────────────────
     const canvas = document.getElementById('c');

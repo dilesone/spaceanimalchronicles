@@ -1,9 +1,7 @@
 (() => {
     'use strict';
     
-    // ════════════════════════════════════════════════════════════
-    //  УМНЫЙ ПОИСК КОМНАТЫ (Matchmaking)
-    // ════════════════════════════════════════════════════════════
+    // ─── ПОИСК КОМНАТЫ ────────────────────────────────────
     const playMode = localStorage.getItem('kz_play_mode') || 'fixed';
     let roomType = 'fixed';
     let fixedKey = 'forest';
@@ -33,11 +31,16 @@
         document.body.appendChild(onlineElement);
     }
 
-    // ─── ПОИСК КОМНАТЫ ────────────────────────────────────
     async function findRoom() {
+        // Если мы уже были в комнате и перезагружаемся для перехода на новый уровень,
+        // возвращаемся в неё же.
+        const savedRoom = localStorage.getItem('kz_current_room');
+        if (savedRoom && serverSeed) {
+            console.log('Возвращаемся в сохраненную комнату:', savedRoom);
+            return savedRoom;
+        }
+
         try {
-            // Для фиксированных локаций ищем комнату с именем forest_1, desert_1 и т.д.
-            // Для рандома ищем комнату random_1, random_2 и т.д.
             const query = roomType === 'random' ? 'type=random' : `type=${fixedKey}`;
             const res = await fetch(`${HTTP_URL}/find-room?${query}`);
             const data = await res.json();
@@ -48,8 +51,9 @@
         }
     }
 
-    // ─── ПОДКЛЮЧЕНИЕ ──────────────────────────────────────
     function connectToServer(roomName) {
+        localStorage.setItem('kz_current_room', roomName); // Запоминаем комнату
+        
         const url = myId ? `${BASE_URL}/room/${roomName}?session=${myId}` : `${BASE_URL}/room/${roomName}`;
         socket = new WebSocket(url);
 
@@ -65,11 +69,11 @@
                     myId = data.id;
                     localStorage.setItem('kz_session_id', myId);
                     
-                    // ПРИШЕЛ СИД - грузим уровень
                     if (data.seed && data.seed !== serverSeed) {
                         serverSeed = data.seed;
+                        localStorage.setItem('kz_server_seed', String(data.seed)); // Сохраняем сид
+                        
                         loadLevelBySeed(serverSeed).then(() => {
-                            // Инициализация игрока
                             Player.state.x = Level.playerStart.x;
                             Player.state.y = Level.playerStart.y;
                             Player.state.vx = 0; Player.state.vy = 0;
@@ -85,8 +89,7 @@
                                 camX = Math.max(0, Math.min(maxX, p.x + Player.PHYS.W / 2 - viewW / 2));
                                 camY = Math.max(0, Math.min(maxY, p.y + Player.PHYS.H / 2 - viewH / 2));
                             } else {
-                                camX = maxX / 2;
-                                camY = maxY / 2;
+                                camX = maxX / 2; camY = maxY / 2;
                             }
 
                             if (!window.__gameActive) {
@@ -131,6 +134,7 @@
                     }
                 }
                 else if (data.type === 'next_level') {
+                    // Сервер говорит переходить. Сохраняем новый сид и перезагружаемся.
                     localStorage.setItem('kz_force_seed', String(data.seed));
                     location.reload();
                 }
@@ -198,7 +202,6 @@
     const btnWait = document.getElementById('btn-wait');
     const btnLeaveAlone = document.getElementById('btn-leave-alone');
 
-    // Чат
     const chatBox = document.getElementById('chat');
     const chatResizer = document.getElementById('chat-resizer');
     const chatToggle = document.getElementById('chat-toggle');
@@ -227,7 +230,6 @@
     window.addEventListener('resize', resize);
     resize();
 
-    // ─── ЛОГИКА ИГРЫ ──────────────────────────────────────
     function updateHUD() {
         const s = Level.state.collected;
         if (hudBerries) hudBerries.textContent = `${s.berries} / ${Level.state.totalBerries}`;
@@ -251,6 +253,10 @@
         const result = Level.collectAt(gx, gy);
         if (!result) return;
         updateHUD();
+
+        if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({ type: 'collect', id: myId, gx: gx, gy: gy, itemType: result.type }));
+        }
 
         if (result.type === 'berry') {
             if (window.Audio) Audio.play(880, 0.1, 'sine', 0.06);
@@ -295,15 +301,6 @@
 
         if (winScreen) {
             winScreen.classList.add('visible');
-            for (let i = 0; i < 5; i++) {
-                setTimeout(() => {
-                    if (window.Particles) {
-                        const px = Level.portal.x + Level.portal.w / 2;
-                        const py = Level.portal.y + Level.portal.h / 2;
-                        Particles.spawn(px, py, ['#a8d8ff', '#ffcc33', '#88ffcc'][i % 3], 20, 6);
-                    }
-                }, i * 100);
-            }
         }
         
         if (btnNext) btnNext.style.display = 'none';
@@ -378,7 +375,6 @@
         if (window.Audio) Audio.init();
     }
 
-    // ЧАТ
     const chatOptions = { showTime: false, sound: true, showSystem: true };
     try {
         const saved = JSON.parse(localStorage.getItem('kz_chat') || '{}');
@@ -546,26 +542,10 @@
             if (!op.lastUpdate || now - op.lastUpdate > 2500) {
                 delete window.otherPlayers[id]; delete window.otherNicknames[id]; continue;
             }
-            const original = {
-                x: Player.state.x, y: Player.state.y, facing: Player.state.facing,
-                vx: Player.state.vx, vy: Player.state.vy, squash: Player.state.squash,
-                skew: Player.state.skew, flipAngle: Player.state.flipAngle,
-                flipSpeed: Player.state.flipSpeed, hasNut: Player.state.hasNut,
-                nickname: Player.state.nickname
-            };
-            Player.state.x = op.x; Player.state.y = op.y; Player.state.facing = op.facing;
-            Player.state.vx = op.vx; Player.state.vy = op.vy; Player.state.squash = op.squash;
-            Player.state.skew = op.skew; Player.state.flipAngle = op.flipAngle;
-            Player.state.flipSpeed = op.flipSpeed; Player.state.hasNut = op.hasNut;
-            Player.state.nickname = window.otherNicknames[id] || id;
-
+            const original = { x: Player.state.x, y: Player.state.y, facing: Player.state.facing, vx: Player.state.vx, vy: Player.state.vy, squash: Player.state.squash, skew: Player.state.skew, flipAngle: Player.state.flipAngle, flipSpeed: Player.state.flipSpeed, hasNut: Player.state.hasNut, nickname: Player.state.nickname };
+            Player.state.x = op.x; Player.state.y = op.y; Player.state.facing = op.facing; Player.state.vx = op.vx; Player.state.vy = op.vy; Player.state.squash = op.squash; Player.state.skew = op.skew; Player.state.flipAngle = op.flipAngle; Player.state.flipSpeed = op.flipSpeed; Player.state.hasNut = op.hasNut; Player.state.nickname = window.otherNicknames[id] || id;
             Player.draw(ctx);
-
-            Player.state.x = original.x; Player.state.y = original.y; Player.state.facing = original.facing;
-            Player.state.vx = original.vx; Player.state.vy = original.vy; Player.state.squash = original.squash;
-            Player.state.skew = original.skew; Player.state.flipAngle = original.flipAngle;
-            Player.state.flipSpeed = original.flipSpeed; Player.state.hasNut = original.hasNut;
-            Player.state.nickname = original.nickname;
+            Player.state.x = original.x; Player.state.y = original.y; Player.state.facing = original.facing; Player.state.vx = original.vx; Player.state.vy = original.vy; Player.state.squash = original.squash; Player.state.skew = original.skew; Player.state.flipAngle = original.flipAngle; Player.state.flipSpeed = original.flipSpeed; Player.state.hasNut = original.hasNut; Player.state.nickname = original.nickname;
         }
         Player.draw(ctx);
         ctx.restore();
@@ -585,7 +565,6 @@
         ctx.textAlign = 'center';
         ctx.fillText('Поиск игры...', viewW / 2, viewH / 2);
 
-        // Ищем комнату и только потом подключаемся
         findRoom().then(room => {
             connectToServer(room);
         });
@@ -594,11 +573,11 @@
     // КНОПКИ
     if (btnNext) btnNext.addEventListener('click', () => { location.reload(); });
     if (btnRestart) btnRestart.addEventListener('click', () => location.reload());
-    if (btnToMap) btnToMap.addEventListener('click', () => location.href = 'map.html');
+    if (btnToMap) btnToMap.addEventListener('click', () => { localStorage.removeItem('kz_current_room'); location.href = 'map.html'; });
     if (btnResume) btnResume.addEventListener('click', resumeGame);
     if (btnPauseRestart) btnPauseRestart.addEventListener('click', () => location.reload());
     if (btnPauseSettings) btnPauseSettings.addEventListener('click', () => { if (pauseSettings) pauseSettings.classList.toggle('hidden'); });
-    if (btnPauseMenu) btnPauseMenu.addEventListener('click', () => location.href = 'index.html');
+    if (btnPauseMenu) btnPauseMenu.addEventListener('click', () => { localStorage.removeItem('kz_current_room'); location.href = 'index.html'; });
 
     if (btnWait) {
         btnWait.addEventListener('click', () => {
@@ -615,6 +594,7 @@
             if (socket && socket.readyState === WebSocket.OPEN) {
                 socket.send(JSON.stringify({ type: 'leave', id: myId }));
             }
+            localStorage.removeItem('kz_current_room'); // Забываем комнату
             setTimeout(() => { location.href = 'index.html'; }, 100);
         });
     }

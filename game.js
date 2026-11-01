@@ -2,19 +2,21 @@
     'use strict';
     
     // ════════════════════════════════════════════════════════════
-    //  СЕТЕВОЙ АДРЕС (Комнаты) и СИД
+    //  УМНЫЙ ПОИСК КОМНАТЫ (Matchmaking)
     // ════════════════════════════════════════════════════════════
     const playMode = localStorage.getItem('kz_play_mode') || 'fixed';
-    let roomName = 'forest';
-    if (playMode === 'fixed') {
-        roomName = localStorage.getItem('kz_play_key') || 'forest';
-    } else if (playMode === 'random') {
-        roomName = 'random_lobby';
-    } else if (playMode === 'editor') {
-        roomName = 'editor_test';
+    let roomType = 'fixed';
+    let fixedKey = 'forest';
+    
+    if (playMode === 'random') {
+        roomType = 'random';
+    } else if (playMode === 'fixed') {
+        roomType = 'fixed';
+        fixedKey = localStorage.getItem('kz_play_key') || 'forest';
     }
     
-    const SERVER_URL = `wss://pdlemclcsgnw-production-uigv4qgi.us-central1.suga.run/room/${roomName}`;
+    const BASE_URL = 'wss://pdlemclcsgnw-production-uigv4qgi.us-central1.suga.run';
+    const HTTP_URL = 'https://pdlemclcsgnw-production-uigv4qgi.us-central1.suga.run';
     
     let socket = null;
     let myId = localStorage.getItem('kz_session_id') || null;
@@ -31,12 +33,28 @@
         document.body.appendChild(onlineElement);
     }
 
-    function connectToServer() {
-        const url = myId ? `${SERVER_URL}?session=${myId}` : SERVER_URL;
+    // ─── ПОИСК КОМНАТЫ ────────────────────────────────────
+    async function findRoom() {
+        try {
+            // Для фиксированных локаций ищем комнату с именем forest_1, desert_1 и т.д.
+            // Для рандома ищем комнату random_1, random_2 и т.д.
+            const query = roomType === 'random' ? 'type=random' : `type=${fixedKey}`;
+            const res = await fetch(`${HTTP_URL}/find-room?${query}`);
+            const data = await res.json();
+            return data.room;
+        } catch (e) {
+            console.warn('Сервер не ответил на поиск, создаем локальную комнату:', e);
+            return roomType === 'random' ? 'random_fallback' : fixedKey;
+        }
+    }
+
+    // ─── ПОДКЛЮЧЕНИЕ ──────────────────────────────────────
+    function connectToServer(roomName) {
+        const url = myId ? `${BASE_URL}/room/${roomName}?session=${myId}` : `${BASE_URL}/room/${roomName}`;
         socket = new WebSocket(url);
 
         socket.onopen = () => {
-            addChatMessage('Система', 'Подключено к комнате: ' + roomName, true);
+            addChatMessage('Система', 'Вы подключены к комнате: ' + roomName, true);
         };
 
         socket.onmessage = (event) => {
@@ -51,7 +69,7 @@
                     if (data.seed && data.seed !== serverSeed) {
                         serverSeed = data.seed;
                         loadLevelBySeed(serverSeed).then(() => {
-                            // Инициализация игрока после загрузки карты
+                            // Инициализация игрока
                             Player.state.x = Level.playerStart.x;
                             Player.state.y = Level.playerStart.y;
                             Player.state.vx = 0; Player.state.vy = 0;
@@ -122,11 +140,11 @@
         socket.onclose = () => {
             window.otherPlayers = {};
             window.otherNicknames = {};
-            setTimeout(connectToServer, 2000);
+            setTimeout(() => connectToServer(roomName), 2000);
         };
     }
 
-    // ─── ЗАГРУЗКА УРОВНЯ ПО СИДУ ──────────────────────────
+    // ─── ЗАГРУЗКА УРОВНЯ ──────────────────────────────────
     function loadLevelBySeed(seedToUse) {
         const mode = localStorage.getItem('kz_play_mode') || 'fixed';
         let theme = 'forest';
@@ -194,7 +212,6 @@
     const chatSystem = document.getElementById('chat-system');
     const chatClear = document.getElementById('chat-clear');
 
-    // ─── Состояние ────────────────────────────────────────
     let viewW = window.innerWidth;
     let viewH = window.innerHeight;
     let camX = 0, camY = 0;
@@ -210,6 +227,7 @@
     window.addEventListener('resize', resize);
     resize();
 
+    // ─── ЛОГИКА ИГРЫ ──────────────────────────────────────
     function updateHUD() {
         const s = Level.state.collected;
         if (hudBerries) hudBerries.textContent = `${s.berries} / ${Level.state.totalBerries}`;
@@ -232,7 +250,6 @@
 
         const result = Level.collectAt(gx, gy);
         if (!result) return;
-
         updateHUD();
 
         if (result.type === 'berry') {
@@ -252,18 +269,11 @@
         if (!portalOpen) return;
         const p = Player.state;
         const portal = Level.portal;
-
         const cx = p.x + Player.PHYS.W / 2;
         const cy = p.y + Player.PHYS.H / 2;
-        const portalCX = portal.x + portal.w / 2;
-        const portalCY = portal.y + portal.h / 2;
-
-        const dx = (cx - portalCX) / (portal.w / 2);
-        const dy = (cy - portalCY) / (portal.h / 2);
-
-        if ((dx * dx + dy * dy) <= 1 && p.hasNut) {
-            winLevel();
-        }
+        const dx = (cx - (portal.x + portal.w / 2)) / (portal.w / 2);
+        const dy = (cy - (portal.y + portal.h / 2)) / (portal.h / 2);
+        if ((dx * dx + dy * dy) <= 1 && p.hasNut) winLevel();
     }
 
     function winLevel() {
@@ -343,7 +353,6 @@
     function updateCamera() {
         const maxX = Level.pixelWidth() - viewW;
         const maxY = Level.pixelHeight() - viewH;
-
         if (settings.followPlayer) {
             const p = Player.state;
             camX += (p.x + Player.PHYS.W / 2 - viewW / 2 - camX) * 0.1;
@@ -351,7 +360,6 @@
         } else {
             camX = maxX / 2; camY = maxY / 2;
         }
-
         camX = Math.max(0, Math.min(maxX, camX));
         camY = Math.max(0, Math.min(maxY, camY));
     }
@@ -381,21 +389,11 @@
 
     function saveChatOptions() { localStorage.setItem('kz_chat', JSON.stringify(chatOptions)); }
 
-    if (chatShowTime) {
-        chatShowTime.checked = chatOptions.showTime;
-        chatShowTime.addEventListener('change', () => { chatOptions.showTime = chatShowTime.checked; saveChatOptions(); renderChat(); });
-    }
-    if (chatSound) {
-        chatSound.checked = chatOptions.sound;
-        chatSound.addEventListener('change', () => { chatOptions.sound = chatSound.checked; saveChatOptions(); });
-    }
-    if (chatSystem) {
-        chatSystem.checked = chatOptions.showSystem;
-        chatSystem.addEventListener('change', () => { chatOptions.showSystem = chatSystem.checked; saveChatOptions(); renderChat(); });
-    }
+    if (chatShowTime) { chatShowTime.checked = chatOptions.showTime; chatShowTime.addEventListener('change', () => { chatOptions.showTime = chatShowTime.checked; saveChatOptions(); renderChat(); }); }
+    if (chatSound) { chatSound.checked = chatOptions.sound; chatSound.addEventListener('change', () => { chatOptions.sound = chatSound.checked; saveChatOptions(); }); }
+    if (chatSystem) { chatSystem.checked = chatOptions.showSystem; chatSystem.addEventListener('change', () => { chatOptions.showSystem = chatSystem.checked; saveChatOptions(); renderChat(); }); }
 
     var chatHistory = [];
-
     function addChatMessage(author, text, isSystem = false) {
         const now = new Date();
         const time = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
@@ -420,7 +418,6 @@
     }
 
     function escapeHtml(str) { return String(str).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]); }
-
     addChatMessage('Система', 'Добро пожаловать!', true);
 
     if (chatSend) chatSend.addEventListener('click', sendChat);
@@ -437,18 +434,9 @@
         chatInput.value = '';
     }
 
-    if (chatToggle && chatBox) {
-        chatToggle.addEventListener('click', () => {
-            chatBox.classList.toggle('collapsed');
-            chatToggle.textContent = chatBox.classList.contains('collapsed') ? '+' : '—';
-        });
-    }
-    if (chatSettingsBtn && chatSettings) {
-        chatSettingsBtn.addEventListener('click', () => chatSettings.classList.toggle('hidden'));
-    }
-    if (chatClear) {
-        chatClear.addEventListener('click', () => { chatHistory.length = 0; addChatMessage('Система', 'История очищена', true); });
-    }
+    if (chatToggle && chatBox) { chatToggle.addEventListener('click', () => { chatBox.classList.toggle('collapsed'); chatToggle.textContent = chatBox.classList.contains('collapsed') ? '+' : '—'; }); }
+    if (chatSettingsBtn && chatSettings) { chatSettingsBtn.addEventListener('click', () => chatSettings.classList.toggle('hidden')); }
+    if (chatClear) { chatClear.addEventListener('click', () => { chatHistory.length = 0; addChatMessage('Система', 'История очищена', true); }); }
 
     if (chatResizer && chatBox) {
         let isResizing = false, startY = 0, startHeight = 0;
@@ -469,7 +457,6 @@
         if (savedHeight && chatBox) chatBox.style.height = Math.max(36, Math.min(600, savedHeight)) + 'px';
     } catch (e) {}
 
-    // ИНДИКАТОРЫ
     function drawCompass() {
         const p = Player.state;
         const px = p.x + Player.PHYS.W / 2;
@@ -525,7 +512,6 @@
         }
     }
 
-    // ИГРОВОЙ ЦИКЛ
     function loop() {
         if (window.__gameActive === false) return;
 
@@ -588,7 +574,6 @@
         requestAnimationFrame(loop);
     }
 
-    // СТАРТ
     function start() {
         window.__gameActive = false;
         document.addEventListener('click', () => { if (window.Audio) Audio.init(); }, { once: true });
@@ -598,9 +583,12 @@
         ctx.fillStyle = '#a8c8ff';
         ctx.font = '24px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('Подключение к серверу...', viewW / 2, viewH / 2);
+        ctx.fillText('Поиск игры...', viewW / 2, viewH / 2);
 
-        connectToServer();
+        // Ищем комнату и только потом подключаемся
+        findRoom().then(room => {
+            connectToServer(room);
+        });
     }
 
     // КНОПКИ

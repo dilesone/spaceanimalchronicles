@@ -2,15 +2,24 @@
     'use strict';
     
     // ════════════════════════════════════════════════════════════
-    //  СЕТЕВОЙ АДРЕС СЕРВЕРА (для мультиплеера)
+    //  СЕТЕВОЙ АДРЕС (Комнаты) и СИД
     // ════════════════════════════════════════════════════════════
-    const SERVER_URL = "wss://pdlemclcsgnw-production-uigv4qgi.us-central1.suga.run";
-
-    // --- СЕТЕВОЕ ПОДКЛЮЧЕНИЕ ---
+    const playMode = localStorage.getItem('kz_play_mode') || 'fixed';
+    let roomName = 'forest';
+    if (playMode === 'fixed') {
+        roomName = localStorage.getItem('kz_play_key') || 'forest';
+    } else if (playMode === 'random') {
+        roomName = 'random_lobby';
+    } else if (playMode === 'editor') {
+        roomName = 'editor_test';
+    }
+    
+    const SERVER_URL = `wss://pdlemclcsgnw-production-uigv4qgi.us-central1.suga.run/room/${roomName}`;
+    
     let socket = null;
     let myId = localStorage.getItem('kz_session_id') || null;
+    let serverSeed = null;
     
-    // Делаем объекты глобальными для отладки
     window.otherPlayers = {};
     window.otherNicknames = {};
 
@@ -27,7 +36,7 @@
         socket = new WebSocket(url);
 
         socket.onopen = () => {
-            addChatMessage('Система', 'Вы подключены к серверу', true);
+            addChatMessage('Система', 'Подключено к комнате: ' + roomName, true);
         };
 
         socket.onmessage = (event) => {
@@ -37,6 +46,37 @@
                 if (data.type === 'init') {
                     myId = data.id;
                     localStorage.setItem('kz_session_id', myId);
+                    
+                    // ПРИШЕЛ СИД - грузим уровень
+                    if (data.seed && data.seed !== serverSeed) {
+                        serverSeed = data.seed;
+                        loadLevelBySeed(serverSeed).then(() => {
+                            // Инициализация игрока после загрузки карты
+                            Player.state.x = Level.playerStart.x;
+                            Player.state.y = Level.playerStart.y;
+                            Player.state.vx = 0; Player.state.vy = 0;
+                            Player.state.hasNut = false;
+                            Player.state.lives = Player.state.maxLives;
+                            Player.bindKeys();
+                            updateHUD();
+                            
+                            const maxX = Level.pixelWidth() - viewW;
+                            const maxY = Level.pixelHeight() - viewH;
+                            if (settings.followPlayer) {
+                                const p = Player.state;
+                                camX = Math.max(0, Math.min(maxX, p.x + Player.PHYS.W / 2 - viewW / 2));
+                                camY = Math.max(0, Math.min(maxY, p.y + Player.PHYS.H / 2 - viewH / 2));
+                            } else {
+                                camX = maxX / 2;
+                                camY = maxY / 2;
+                            }
+
+                            if (!window.__gameActive) {
+                                window.__gameActive = true;
+                                loop();
+                            }
+                        });
+                    }
                 } 
                 else if (data.type === 'online') {
                     onlineElement.textContent = `Онлайн: ${data.count}`;
@@ -47,26 +87,36 @@
                 else if (data.type === 'move') {
                     if (data.id !== myId) {
                         window.otherPlayers[data.id] = { 
-                            x: data.x, 
-                            y: data.y,
-                            facing: data.facing || 1,
-                            vx: data.vx || 0,
-                            vy: data.vy || 0,
-                            squash: data.squash || 1,
-                            skew: data.skew || 0,
-                            flipAngle: data.flipAngle || 0,
-                            flipSpeed: data.flipSpeed || 0,
-                            hasNut: data.hasNut || false,
-                            lastUpdate: Date.now() 
+                            x: data.x, y: data.y, facing: data.facing || 1,
+                            vx: data.vx || 0, vy: data.vy || 0,
+                            squash: data.squash || 1, skew: data.skew || 0,
+                            flipAngle: data.flipAngle || 0, flipSpeed: data.flipSpeed || 0,
+                            hasNut: data.hasNut || false, lastUpdate: Date.now() 
                         };
-                        if (data.nickname) {
-                            window.otherNicknames[data.id] = data.nickname;
-                        }
+                        if (data.nickname) window.otherNicknames[data.id] = data.nickname;
                     }
                 }
-            } catch (e) {
-                console.error('Ошибка парсинга:', e);
-            }
+                else if (data.type === 'player_finished') {
+                    delete window.otherPlayers[data.id];
+                    delete window.otherNicknames[data.id];
+                    addChatMessage('Система', `${data.nickname || data.id} дошел до портала!`, true);
+                }
+                else if (data.type === 'all_finished') {
+                    if (document.getElementById('btn-wait')) document.getElementById('btn-wait').style.display = 'none';
+                    const winPanel = document.querySelector('.win-panel');
+                    if (winPanel && !document.getElementById('wait-timer')) {
+                        const timerDiv = document.createElement('div');
+                        timerDiv.id = 'wait-timer';
+                        timerDiv.style.cssText = 'margin-top: 20px; font-size: 24px; color: #88ffcc; font-family: Caveat, cursive;';
+                        timerDiv.textContent = 'Все на месте! Переход через 5...';
+                        winPanel.appendChild(timerDiv);
+                    }
+                }
+                else if (data.type === 'next_level') {
+                    localStorage.setItem('kz_force_seed', String(data.seed));
+                    location.reload();
+                }
+            } catch (e) { console.error('Ошибка парсинга:', e); }
         };
 
         socket.onclose = () => {
@@ -74,6 +124,35 @@
             window.otherNicknames = {};
             setTimeout(connectToServer, 2000);
         };
+    }
+
+    // ─── ЗАГРУЗКА УРОВНЯ ПО СИДУ ──────────────────────────
+    function loadLevelBySeed(seedToUse) {
+        const mode = localStorage.getItem('kz_play_mode') || 'fixed';
+        let theme = 'forest';
+        
+        if (mode === 'fixed') {
+            theme = localStorage.getItem('kz_play_theme') || 'forest';
+        } else if (mode === 'random') {
+            const themes = ['forest', 'desert', 'mountains', 'dungeon'];
+            theme = themes[seedToUse % themes.length];
+        } else if (mode === 'editor') {
+            const editorData = localStorage.getItem('kz_editor_level');
+            if (editorData) return Level.loadFromData(JSON.parse(editorData));
+            return Level.loadRandom({ theme: 'forest', seed: seedToUse });
+        }
+
+        return Level.loadRandom({
+            theme: theme,
+            difficulty: 'normal',
+            seed: seedToUse,
+            totalBerries: 6,
+            totalCrystals: 4,
+            totalNuts: 1,
+            width: 40,
+            height: 40,
+            terrain: 'ground'
+        });
     }
 
     // ─── DOM ──────────────────────────────────────────────
@@ -98,6 +177,8 @@
     const settingCenter = document.getElementById('setting-center');
     const settingFollow = document.getElementById('setting-follow');
     const pauseNickname = document.getElementById('pause-nickname');
+    const btnWait = document.getElementById('btn-wait');
+    const btnLeaveAlone = document.getElementById('btn-leave-alone');
 
     // Чат
     const chatBox = document.getElementById('chat');
@@ -129,7 +210,6 @@
     window.addEventListener('resize', resize);
     resize();
 
-    // ─── HUD ──────────────────────────────────────────────
     function updateHUD() {
         const s = Level.state.collected;
         if (hudBerries) hudBerries.textContent = `${s.berries} / ${Level.state.totalBerries}`;
@@ -144,7 +224,6 @@
         }
     }
 
-    // ─── Сбор ─────────────────────────────────────────────
     function checkPickup() {
         const p = Player.state;
         const T = Level.tileSize;
@@ -169,7 +248,6 @@
         }
     }
 
-    // ─── Портал ───────────────────────────────────────────
     function checkPortal() {
         if (!portalOpen) return;
         const p = Player.state;
@@ -188,20 +266,12 @@
         }
     }
 
-    // ─── Победа ───────────────────────────────────────────
     function winLevel() {
         window.__gameActive = false;
         paused = true;
 
-        const mode = localStorage.getItem('kz_play_mode') || 'fixed';
-        const key = localStorage.getItem('kz_play_key') || 'forest';
-
-        if (mode === 'fixed') {
-            try {
-                const progress = JSON.parse(localStorage.getItem('kz_progress') || '{}');
-                progress[key] = true;
-                localStorage.setItem('kz_progress', JSON.stringify(progress));
-            } catch (e) {}
+        if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({ type: 'finish', id: myId, nickname: Player.state.nickname }));
         }
 
         const s = Level.state.collected;
@@ -211,10 +281,6 @@
                 <div class="stat-row"><span>💎 Кристаллы</span><b>${s.crystals} / ${Level.state.totalCrystals}</b></div>
                 <div class="stat-row"><span>🌰 Орехи</span><b>${s.nuts} / ${Level.state.totalNuts}</b></div>
             `;
-        }
-
-        if (btnNext) {
-            btnNext.style.display = (mode === 'random') ? '' : 'none';
         }
 
         if (winScreen) {
@@ -229,16 +295,11 @@
                 }, i * 100);
             }
         }
-
-        if (window.Audio) {
-            setTimeout(() => Audio.play(523, 0.2, 'sine', 0.08), 0);
-            setTimeout(() => Audio.play(659, 0.2, 'sine', 0.08), 150);
-            setTimeout(() => Audio.play(784, 0.2, 'sine', 0.08), 300);
-            setTimeout(() => Audio.play(1046, 0.4, 'sine', 0.1), 450);
-        }
+        
+        if (btnNext) btnNext.style.display = 'none';
+        if (btnWait) { btnWait.style.display = 'block'; btnWait.textContent = '⏳ Ждать остальных'; btnWait.disabled = false; }
     }
 
-    // ─── Настройки ────────────────────────────────────────
     const settings = { centerMap: true, followPlayer: false };
     try {
         const saved = JSON.parse(localStorage.getItem('kz_settings') || '{}');
@@ -253,67 +314,48 @@
     }
     syncSettingsUI();
 
-    function saveSettings() {
-        localStorage.setItem('kz_settings', JSON.stringify(settings));
-    }
+    function saveSettings() { localStorage.setItem('kz_settings', JSON.stringify(settings)); }
 
     if (settingCenter) {
         settingCenter.addEventListener('change', () => {
-            if (settingCenter.checked) {
-                settingFollow.checked = false;
-                settings.followPlayer = false;
-            }
+            if (settingCenter.checked) { settingFollow.checked = false; settings.followPlayer = false; }
             settings.centerMap = settingCenter.checked;
             saveSettings();
         });
     }
     if (settingFollow) {
         settingFollow.addEventListener('change', () => {
-            if (settingFollow.checked) {
-                settingCenter.checked = false;
-                settings.centerMap = false;
-            }
+            if (settingFollow.checked) { settingCenter.checked = false; settings.centerMap = false; }
             settings.followPlayer = settingFollow.checked;
             saveSettings();
         });
     }
 
-    // ─── Ник ──────────────────────────────────────────────
     if (pauseNickname) {
         pauseNickname.addEventListener('input', () => {
             const nick = pauseNickname.value.trim() || 'Игрок';
             Player.state.nickname = nick;
             try { localStorage.setItem('kz_nickname', nick); } catch (e) {}
         });
-        pauseNickname.addEventListener('keydown', (e) => {
-            e.stopPropagation();
-        });
+        pauseNickname.addEventListener('keydown', (e) => e.stopPropagation());
     }
 
-    // ─── Камера ───────────────────────────────────────────
     function updateCamera() {
         const maxX = Level.pixelWidth() - viewW;
         const maxY = Level.pixelHeight() - viewH;
 
         if (settings.followPlayer) {
             const p = Player.state;
-            const targetX = p.x + Player.PHYS.W / 2 - viewW / 2;
-            const targetY = p.y + Player.PHYS.H / 2 - viewH / 2;
-            camX += (targetX - camX) * 0.1;
-            camY += (targetY - camY) * 0.1;
+            camX += (p.x + Player.PHYS.W / 2 - viewW / 2 - camX) * 0.1;
+            camY += (p.y + Player.PHYS.H / 2 - viewH / 2 - camY) * 0.1;
         } else {
-            camX = maxX / 2;
-            camY = maxY / 2;
+            camX = maxX / 2; camY = maxY / 2;
         }
 
-        if (maxX > 0) camX = Math.max(0, Math.min(maxX, camX));
-        else camX = maxX / 2;
-
-        if (maxY > 0) camY = Math.max(0, Math.min(maxY, camY));
-        else camY = maxY / 2;
+        camX = Math.max(0, Math.min(maxX, camX));
+        camY = Math.max(0, Math.min(maxY, camY));
     }
 
-    // ─── Пауза ────────────────────────────────────────────
     function pauseGame() {
         if (paused) return;
         paused = true;
@@ -327,7 +369,8 @@
         if (pauseScreen) pauseScreen.classList.remove('visible');
         if (window.Audio) Audio.init();
     }
-        // ═══════════════ ЧАТ ═══════════════
+
+    // ЧАТ
     const chatOptions = { showTime: false, sound: true, showSystem: true };
     try {
         const saved = JSON.parse(localStorage.getItem('kz_chat') || '{}');
@@ -336,32 +379,19 @@
         if (typeof saved.showSystem === 'boolean') chatOptions.showSystem = saved.showSystem;
     } catch (e) {}
 
-    function saveChatOptions() {
-        localStorage.setItem('kz_chat', JSON.stringify(chatOptions));
-    }
+    function saveChatOptions() { localStorage.setItem('kz_chat', JSON.stringify(chatOptions)); }
 
     if (chatShowTime) {
         chatShowTime.checked = chatOptions.showTime;
-        chatShowTime.addEventListener('change', () => {
-            chatOptions.showTime = chatShowTime.checked;
-            saveChatOptions();
-            renderChat();
-        });
+        chatShowTime.addEventListener('change', () => { chatOptions.showTime = chatShowTime.checked; saveChatOptions(); renderChat(); });
     }
     if (chatSound) {
         chatSound.checked = chatOptions.sound;
-        chatSound.addEventListener('change', () => {
-            chatOptions.sound = chatSound.checked;
-            saveChatOptions();
-        });
+        chatSound.addEventListener('change', () => { chatOptions.sound = chatSound.checked; saveChatOptions(); });
     }
     if (chatSystem) {
         chatSystem.checked = chatOptions.showSystem;
-        chatSystem.addEventListener('change', () => {
-            chatOptions.showSystem = chatSystem.checked;
-            saveChatOptions();
-            renderChat();
-        });
+        chatSystem.addEventListener('change', () => { chatOptions.showSystem = chatSystem.checked; saveChatOptions(); renderChat(); });
     }
 
     var chatHistory = [];
@@ -371,9 +401,7 @@
         const time = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
         chatHistory.push({ author, text, time, isSystem });
         renderChat();
-        if (!isSystem && chatOptions.sound && window.Audio) {
-            Audio.play(660, 0.08, 'sine', 0.04);
-        }
+        if (!isSystem && chatOptions.sound && window.Audio) Audio.play(660, 0.08, 'sine', 0.04);
     }
 
     function renderChat() {
@@ -383,47 +411,28 @@
             if (msg.isSystem && !chatOptions.showSystem) continue;
             const el = document.createElement('div');
             el.className = 'chat-msg';
-            let html = '';
-            if (chatOptions.showTime) {
-                html += `<span class="chat-time">${msg.time}</span>`;
-            }
-            html += `<span class="chat-author">${escapeHtml(msg.author)}:</span> `;
-            html += `<span class="chat-text">${escapeHtml(msg.text)}</span>`;
-            el.innerHTML = html;
+            el.innerHTML = (chatOptions.showTime ? `<span class="chat-time">${msg.time}</span>` : '') + 
+                           `<span class="chat-author">${escapeHtml(msg.author)}:</span> ` + 
+                           `<span class="chat-text">${escapeHtml(msg.text)}</span>`;
             chatMessages.appendChild(el);
         }
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
-    function escapeHtml(str) {
-        return String(str).replace(/[&<>"']/g, c => ({
-            '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
-        })[c]);
-    }
+    function escapeHtml(str) { return String(str).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]); }
 
     addChatMessage('Система', 'Добро пожаловать!', true);
 
     if (chatSend) chatSend.addEventListener('click', sendChat);
-    if (chatInput) {
-        chatInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') { e.preventDefault(); sendChat(); }
-            e.stopPropagation();
-        });
-    }
+    if (chatInput) chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); sendChat(); } });
 
     function sendChat() {
         if (!chatInput) return;
         const text = (chatInput.value || '').trim();
         if (!text) return;
-        
         if (socket && socket.readyState === WebSocket.OPEN) {
-            socket.send(JSON.stringify({
-                type: 'chat',
-                author: Player.state.nickname || 'Игрок',
-                text: text
-            }));
+            socket.send(JSON.stringify({ type: 'chat', author: Player.state.nickname || 'Игрок', text: text }));
         }
-        
         addChatMessage(Player.state.nickname || 'Игрок', text);
         chatInput.value = '';
     }
@@ -435,142 +444,32 @@
         });
     }
     if (chatSettingsBtn && chatSettings) {
-        chatSettingsBtn.addEventListener('click', () => {
-            chatSettings.classList.toggle('hidden');
-        });
+        chatSettingsBtn.addEventListener('click', () => chatSettings.classList.toggle('hidden'));
     }
     if (chatClear) {
-        chatClear.addEventListener('click', () => {
-            chatHistory.length = 0;
-            addChatMessage('Система', 'История очищена', true);
-        });
+        chatClear.addEventListener('click', () => { chatHistory.length = 0; addChatMessage('Система', 'История очищена', true); });
     }
 
     if (chatResizer && chatBox) {
         let isResizing = false, startY = 0, startHeight = 0;
-        chatResizer.addEventListener('mousedown', (e) => {
-            e.preventDefault();
-            isResizing = true;
-            startY = e.clientY;
-            startHeight = chatBox.offsetHeight;
-            document.body.style.cursor = 'ns-resize';
-        });
+        chatResizer.addEventListener('mousedown', (e) => { e.preventDefault(); isResizing = true; startY = e.clientY; startHeight = chatBox.offsetHeight; document.body.style.cursor = 'ns-resize'; });
         window.addEventListener('mousemove', (e) => {
             if (!isResizing) return;
             const delta = startY - e.clientY;
             const newHeight = Math.max(36, Math.min(600, startHeight + delta));
             chatBox.style.height = newHeight + 'px';
-            if (newHeight <= 50) {
-                chatBox.classList.add('collapsed');
-                if (chatToggle) chatToggle.textContent = '+';
-            } else {
-                chatBox.classList.remove('collapsed');
-                if (chatToggle) chatToggle.textContent = '—';
-            }
+            if (newHeight <= 50) { chatBox.classList.add('collapsed'); if (chatToggle) chatToggle.textContent = '+'; }
+            else { chatBox.classList.remove('collapsed'); if (chatToggle) chatToggle.textContent = '—'; }
         });
-        window.addEventListener('mouseup', () => {
-            if (isResizing) {
-                isResizing = false;
-                document.body.style.cursor = '';
-                try { localStorage.setItem('kz_chat_height', chatBox.offsetHeight); } catch (e) {}
-            }
-        });
+        window.addEventListener('mouseup', () => { if (isResizing) { isResizing = false; document.body.style.cursor = ''; try { localStorage.setItem('kz_chat_height', chatBox.offsetHeight); } catch (e) {} } });
     }
 
     try {
         const savedHeight = parseInt(localStorage.getItem('kz_chat_height') || '0', 10);
-        if (savedHeight && chatBox) {
-            chatBox.style.height = Math.max(36, Math.min(600, savedHeight)) + 'px';
-        }
+        if (savedHeight && chatBox) chatBox.style.height = Math.max(36, Math.min(600, savedHeight)) + 'px';
     } catch (e) {}
 
-    // ═══════════════ ЗАГРУЗКА УРОВНЯ ═══════════════
-    function loadLevelByMode() {
-        const mode = localStorage.getItem('kz_play_mode') || 'fixed';
-
-        if (mode === 'editor') {
-            const editorData = localStorage.getItem('kz_editor_level');
-            if (editorData) {
-                try {
-                    const data = JSON.parse(editorData);
-                    addChatMessage('Система', `Уровень из редактора: ${data.name || 'Без названия'}`, true);
-                    return Level.loadFromData(data);
-                } catch (e) {
-                    console.error('Ошибка загрузки из редактора:', e);
-                }
-            }
-        }
-
-        if (mode === 'random') {
-            const seed = Math.floor(Math.random() * 1e9);
-            localStorage.setItem('kz_random_seed', String(seed));
-            
-            let count = parseInt(localStorage.getItem('kz_random_count') || '0', 10);
-            count++;
-            localStorage.setItem('kz_random_count', String(count));
-
-            const randomThemes = ['forest', 'desert', 'mountains', 'dungeon'];
-            const randomTheme = randomThemes[Math.floor(Math.random() * randomThemes.length)];
-
-            const THEME_NAMES = {
-                forest: 'Лес',
-                desert: 'Пустыня',
-                mountains: 'Горы',
-                dungeon: 'Подземелья'
-            };
-
-            addChatMessage('Система', 
-                `Случайный мир #${count} (${THEME_NAMES[randomTheme]}, seed: ${seed})`, true);
-
-            return Level.loadRandom({
-                theme: randomTheme,
-                difficulty: 'normal',
-                seed: seed,
-                totalBerries: 6,
-                totalCrystals: 4,
-                totalNuts: 1,
-                width: 40,
-                height: 40,
-                terrain: 'ground'
-            });
-        }
-
-        const key = localStorage.getItem('kz_play_key') || 'forest';
-        const theme = localStorage.getItem('kz_play_theme') || 'forest';
-        
-        const KEY_NAMES = {
-            forest: 'Лес — Первая высадка',
-            desert: 'Пустыня — Жаркий край',
-            mountains: 'Горы — Снежные пики',
-            dungeon: 'Подземелья — Тёмные глубины'
-        };
-        
-        addChatMessage('Система', `${KEY_NAMES[key] || 'Локация'}`, true);
-
-        return Level.loadRandom({
-            theme: theme,
-            difficulty: 'normal',
-            seed: getFixedSeed(key),
-            totalBerries: 6,
-            totalCrystals: 4,
-            totalNuts: 1,
-            width: 40,
-            height: 40,
-            terrain: 'ground'
-        });
-    }
-
-    function getFixedSeed(key) {
-        const SEEDS = {
-            forest: 12345,
-            desert: 54321,
-            mountains: 98765,
-            dungeon: 24680
-        };
-        return SEEDS[key] || 12345;
-    }
-
-    // ═══════════════ ИНДИКАТОРЫ ═══════════════
+    // ИНДИКАТОРЫ
     function drawCompass() {
         const p = Player.state;
         const px = p.x + Player.PHYS.W / 2;
@@ -581,10 +480,7 @@
             for (let y = 0; y < Level.height; y++) {
                 for (let x = 0; x < Level.width; x++) {
                     if (Level.grid[y][x] === Level.TILE.NUT) {
-                        nutPos = {
-                            x: x * Level.tileSize + Level.tileSize / 2,
-                            y: y * Level.tileSize + Level.tileSize / 2
-                        };
+                        nutPos = { x: x * Level.tileSize + Level.tileSize / 2, y: y * Level.tileSize + Level.tileSize / 2 };
                         break;
                     }
                 }
@@ -594,10 +490,8 @@
         }
 
         const portal = Level.portal;
-        const portalCX = portal.x + portal.w / 2;
-        const portalCY = portal.y + portal.h / 2;
         const color = Level.isPortalOpen() ? '#88ffcc' : 'rgba(136, 255, 204, 0.4)';
-        drawPointer(portalCX, portalCY, px, py, color, '🌀');
+        drawPointer(portal.x + portal.w / 2, portal.y + portal.h / 2, px, py, color, '🌀');
     }
 
     function drawPointer(targetX, targetY, playerX, playerY, color, icon) {
@@ -608,62 +502,30 @@
 
         if (onScreen) {
             const pulse = Math.sin(performance.now() * 0.005) * 0.3 + 0.7;
-            ctx.globalAlpha = pulse;
-            ctx.strokeStyle = color;
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.arc(screenTX, screenTY - 40, 18, 0, Math.PI * 2);
-            ctx.stroke();
-            ctx.font = '20px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(icon, screenTX, screenTY - 40);
-            ctx.globalAlpha = 1;
+            ctx.globalAlpha = pulse; ctx.strokeStyle = color; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.arc(screenTX, screenTY - 40, 18, 0, Math.PI * 2); ctx.stroke();
+            ctx.font = '20px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText(icon, screenTX, screenTY - 40); ctx.globalAlpha = 1;
         } else {
-            const dx = targetX - playerX;
-            const dy = targetY - playerY;
-            const angle = Math.atan2(dy, dx);
-
+            const dx = targetX - playerX; const dy = targetY - playerY; const angle = Math.atan2(dy, dx);
             let ax = viewW / 2 + Math.cos(angle) * (viewW / 2 - padX);
             let ay = viewH / 2 + Math.sin(angle) * (viewH / 2 - padY);
-            ax = Math.max(padX, Math.min(viewW - padX, ax));
-            ay = Math.max(padY, Math.min(viewH - padY, ay));
-
+            ax = Math.max(padX, Math.min(viewW - padX, ax)); ay = Math.max(padY, Math.min(viewH - padY, ay));
             const pulse = Math.sin(performance.now() * 0.006) * 0.3 + 0.7;
             ctx.globalAlpha = pulse;
-
-            ctx.save();
-            ctx.translate(ax, ay);
-            ctx.rotate(angle);
-            ctx.fillStyle = color;
-            ctx.beginPath();
-            ctx.moveTo(20, 0);
-            ctx.lineTo(-8, -10);
-            ctx.lineTo(-8, 10);
-            ctx.closePath();
-            ctx.fill();
-            ctx.strokeStyle = '#fff';
-            ctx.lineWidth = 1.5;
-            ctx.stroke();
-            ctx.restore();
-
-            const ix = ax - Math.cos(angle) * 26;
-            const iy = ay - Math.sin(angle) * 26;
-            ctx.font = '18px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
+            ctx.save(); ctx.translate(ax, ay); ctx.rotate(angle); ctx.fillStyle = color;
+            ctx.beginPath(); ctx.moveTo(20, 0); ctx.lineTo(-8, -10); ctx.lineTo(-8, 10); ctx.closePath(); ctx.fill();
+            ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke(); ctx.restore();
+            const ix = ax - Math.cos(angle) * 26; const iy = ay - Math.sin(angle) * 26;
+            ctx.font = '18px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
             ctx.fillText(icon, ix, iy);
-
             const dist = Math.round(Math.sqrt(dx * dx + dy * dy) / Level.tileSize);
-            ctx.globalAlpha = pulse * 0.8;
-            ctx.fillStyle = '#fff';
-            ctx.font = 'bold 11px "Montserrat", sans-serif';
-            ctx.fillText(dist + 'м', ix, iy + 18);
-            ctx.globalAlpha = 1;
+            ctx.globalAlpha = pulse * 0.8; ctx.fillStyle = '#fff'; ctx.font = 'bold 11px "Montserrat", sans-serif';
+            ctx.fillText(dist + 'м', ix, iy + 18); ctx.globalAlpha = 1;
         }
     }
 
-    // ─── Игровой цикл ─────────────────────────────────────
+    // ИГРОВОЙ ЦИКЛ
     function loop() {
         if (window.__gameActive === false) return;
 
@@ -675,46 +537,29 @@
             Tiles.updateParticles();
         }
 
-        // --- ОТПРАВКА КООРДИНАТ ---
         if (socket && socket.readyState === WebSocket.OPEN && myId) {
             socket.send(JSON.stringify({
-                type: 'move',
-                id: myId,
-                nickname: Player.state.nickname || 'Игрок',
-                x: Player.state.x,
-                y: Player.state.y,
-                facing: Player.state.facing,
-                vx: Player.state.vx,
-                vy: Player.state.vy,
-                squash: Player.state.squash,
-                skew: Player.state.skew,
-                flipAngle: Player.state.flipAngle,
-                flipSpeed: Player.state.flipSpeed,
-                hasNut: Player.state.hasNut
+                type: 'move', id: myId, nickname: Player.state.nickname || 'Игрок',
+                x: Player.state.x, y: Player.state.y, facing: Player.state.facing,
+                vx: Player.state.vx, vy: Player.state.vy, squash: Player.state.squash,
+                skew: Player.state.skew, flipAngle: Player.state.flipAngle,
+                flipSpeed: Player.state.flipSpeed, hasNut: Player.state.hasNut
             }));
         }
 
         Tiles.drawBackground(ctx, viewW, viewH, camX, camY);
-
         ctx.save();
         ctx.translate(-camX, -camY);
-
         Tiles.drawLevel(ctx, camX, camY, viewW, viewH);
         Tiles.drawParticles(ctx);
         
-        // --- ОТРИСОВКА ДРУГИХ ИГРОКОВ ---
         const now = Date.now();
         for (const id in window.otherPlayers) {
             if (id === myId) continue;
             const op = window.otherPlayers[id];
-            
             if (!op.lastUpdate || now - op.lastUpdate > 2500) {
-                delete window.otherPlayers[id];
-                delete window.otherNicknames[id];
-                continue;
+                delete window.otherPlayers[id]; delete window.otherNicknames[id]; continue;
             }
-
-            // Сохраняем данные твоего игрока
             const original = {
                 x: Player.state.x, y: Player.state.y, facing: Player.state.facing,
                 vx: Player.state.vx, vy: Player.state.vy, squash: Player.state.squash,
@@ -722,130 +567,83 @@
                 flipSpeed: Player.state.flipSpeed, hasNut: Player.state.hasNut,
                 nickname: Player.state.nickname
             };
-
-            // Подменяем на данные другого игрока
-            Player.state.x = op.x;
-            Player.state.y = op.y;
-            Player.state.facing = op.facing;
-            Player.state.vx = op.vx;
-            Player.state.vy = op.vy;
-            Player.state.squash = op.squash;
-            Player.state.skew = op.skew;
-            Player.state.flipAngle = op.flipAngle;
-            Player.state.flipSpeed = op.flipSpeed;
-            Player.state.hasNut = op.hasNut;
+            Player.state.x = op.x; Player.state.y = op.y; Player.state.facing = op.facing;
+            Player.state.vx = op.vx; Player.state.vy = op.vy; Player.state.squash = op.squash;
+            Player.state.skew = op.skew; Player.state.flipAngle = op.flipAngle;
+            Player.state.flipSpeed = op.flipSpeed; Player.state.hasNut = op.hasNut;
             Player.state.nickname = window.otherNicknames[id] || id;
 
-            // Рисуем
             Player.draw(ctx);
 
-            // Возвращаем обратно
-            Player.state.x = original.x;
-            Player.state.y = original.y;
-            Player.state.facing = original.facing;
-            Player.state.vx = original.vx;
-            Player.state.vy = original.vy;
-            Player.state.squash = original.squash;
-            Player.state.skew = original.skew;
-            Player.state.flipAngle = original.flipAngle;
-            Player.state.flipSpeed = original.flipSpeed;
-            Player.state.hasNut = original.hasNut;
+            Player.state.x = original.x; Player.state.y = original.y; Player.state.facing = original.facing;
+            Player.state.vx = original.vx; Player.state.vy = original.vy; Player.state.squash = original.squash;
+            Player.state.skew = original.skew; Player.state.flipAngle = original.flipAngle;
+            Player.state.flipSpeed = original.flipSpeed; Player.state.hasNut = original.hasNut;
             Player.state.nickname = original.nickname;
         }
-
-        // ТЕПЕРЬ РИСУЕМ ТЕБЯ (чтобы ты всегда был сверху)
         Player.draw(ctx);
-
         ctx.restore();
 
         if (!paused) drawCompass();
-
         requestAnimationFrame(loop);
     }
 
-    // ─── Старт ────────────────────────────────────────────
+    // СТАРТ
     function start() {
-        window.__gameActive = true;
-        paused = false;
-
-        document.addEventListener('click', () => {
-            if (window.Audio) Audio.init();
-        }, { once: true });
-        window.addEventListener('keydown', () => {
-            if (window.Audio) Audio.init();
-        }, { once: true });
-
+        window.__gameActive = false;
+        document.addEventListener('click', () => { if (window.Audio) Audio.init(); }, { once: true });
+        window.addEventListener('keydown', () => { if (window.Audio) Audio.init(); }, { once: true });
         if (window.Player && Player.reloadNickname) Player.reloadNickname();
+        
+        ctx.fillStyle = '#a8c8ff';
+        ctx.font = '24px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Подключение к серверу...', viewW / 2, viewH / 2);
 
-        loadLevelByMode().then(() => {
-            Player.state.x = Level.playerStart.x;
-            Player.state.y = Level.playerStart.y;
-            Player.state.vx = 0;
-            Player.state.vy = 0;
-            Player.state.hasNut = false;
-            Player.state.lives = Player.state.maxLives;
-            Player.bindKeys();
-
-            const maxX = Level.pixelWidth() - viewW;
-            const maxY = Level.pixelHeight() - viewH;
-
-            if (settings.followPlayer) {
-                const p = Player.state;
-                camX = Math.max(0, Math.min(maxX, p.x + Player.PHYS.W / 2 - viewW / 2));
-                camY = Math.max(0, Math.min(maxY, p.y + Player.PHYS.H / 2 - viewH / 2));
-            } else {
-                camX = maxX / 2;
-                camY = maxY / 2;
-            }
-
-            updateHUD();
-            loop();
-
-            window.addEventListener('beforeunload', () => {
-                if (socket && socket.readyState === WebSocket.OPEN) {
-                    socket.close();
-                }
-            });
-
-            connectToServer();
-        }).catch(err => {
-            console.error('Ошибка загрузки уровня:', err);
-            ctx.fillStyle = '#ff7088';
-            ctx.font = '20px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('Не удалось загрузить уровень', viewW / 2, viewH / 2);
-        });
+        connectToServer();
     }
 
-    // ─── Кнопки ───────────────────────────────────────────
-    if (btnNext) {
-        btnNext.addEventListener('click', () => {
-            const newSeed = Math.floor(Math.random() * 1e9);
-            localStorage.setItem('kz_random_seed', String(newSeed));
-            localStorage.setItem('kz_play_mode', 'random');
-            location.reload();
-        });
-    }
+    // КНОПКИ
+    if (btnNext) btnNext.addEventListener('click', () => { location.reload(); });
     if (btnRestart) btnRestart.addEventListener('click', () => location.reload());
     if (btnToMap) btnToMap.addEventListener('click', () => location.href = 'map.html');
     if (btnResume) btnResume.addEventListener('click', resumeGame);
     if (btnPauseRestart) btnPauseRestart.addEventListener('click', () => location.reload());
-    if (btnPauseSettings) btnPauseSettings.addEventListener('click', () => {
-        if (pauseSettings) pauseSettings.classList.toggle('hidden');
-    });
+    if (btnPauseSettings) btnPauseSettings.addEventListener('click', () => { if (pauseSettings) pauseSettings.classList.toggle('hidden'); });
     if (btnPauseMenu) btnPauseMenu.addEventListener('click', () => location.href = 'index.html');
+
+    if (btnWait) {
+        btnWait.addEventListener('click', () => {
+            btnWait.textContent = '⏳ Ожидание...';
+            btnWait.disabled = true;
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({ type: 'ready_to_wait', id: myId }));
+            }
+        });
+    }
+
+    if (btnLeaveAlone) {
+        btnLeaveAlone.addEventListener('click', () => {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({ type: 'leave', id: myId }));
+            }
+            setTimeout(() => { location.href = 'index.html'; }, 100);
+        });
+    }
 
     window.addEventListener('keydown', (e) => {
         if (e.target.tagName === 'INPUT') return;
         if (e.key === 'Escape') {
             e.preventDefault();
             if (window.__gameActive && !winScreen.classList.contains('visible')) {
-                if (paused) resumeGame();
-                else pauseGame();
+                if (paused) resumeGame(); else pauseGame();
             }
         }
     });
 
+    window.addEventListener('beforeunload', () => {
+        if (socket && socket.readyState === WebSocket.OPEN) socket.close();
+    });
+
     start();
 })();
-    

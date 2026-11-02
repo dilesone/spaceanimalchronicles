@@ -38,7 +38,6 @@
         <span class="label">Портал</span>
         <span class="value" id="hud-portal">ЗАКРЫТ</span>
     </div>
-    <!-- ЛИЧНЫЙ СЧЕТЧИК -->
     <div class="hud-item" style="background: rgba(100, 255, 200, 0.1); border-color: rgba(100, 255, 200, 0.3);">
         <span class="icon">👤</span>
         <span class="value" id="hud-personal" style="color: #88ffcc;">0</span>
@@ -49,7 +48,6 @@
     <b>← →</b> бег · <b>↑ / W / Space</b> прыжок · <b>Shift</b> рывок · <b>Esc</b> пауза
 </div>
 
-<!-- ═══════════════ ЧАТ ═══════════════ -->
 <div id="chat" class="chat">
     <div class="chat-resizer" id="chat-resizer"></div>
     <div class="chat-header">
@@ -93,7 +91,6 @@
     </div>
 </div>
 
-<!-- ═══════════════ ЭКРАН ПОБЕДЫ ═══════════════ -->
 <div id="win-screen" class="fullscreen">
     <div class="win-panel">
         <h1>ЭВАКУАЦИЯ!</h1>
@@ -109,7 +106,6 @@
     </div>
 </div>
 
-<!-- ═══════════════ ЭКРАН ПАУЗЫ ═══════════════ -->
 <div id="pause-screen" class="fullscreen">
     <div class="win-panel">
         <h1>ПАУЗА</h1>
@@ -126,6 +122,17 @@
                 <label class="pause-nick-label">👤 Ник персонажа</label>
                 <input type="text" id="pause-nickname" class="pause-nick-input" maxlength="16" placeholder="Игрок">
             </div>
+            
+            <div class="pause-nick">
+                <label class="pause-nick-label">🎨 Цвет персонажа</label>
+                <input type="color" id="pause-color" class="pause-nick-input" style="height: 40px; cursor: pointer;">
+            </div>
+            
+            <div class="pause-nick">
+                <label class="pause-nick-label">✏️ Цвет ника</label>
+                <input type="color" id="pause-nick-color" class="pause-nick-input" style="height: 40px; cursor: pointer;">
+            </div>
+
             <div class="setting-item">
                 <span class="label">🎯 Центрирование карты</span>
                 <label class="switch">
@@ -144,7 +151,6 @@
     </div>
 </div>
 
-<!-- ═══════════════ МОБИЛЬНОЕ УПРАВЛЕНИЕ ═══════════════ -->
 <div id="mobile-controls" class="mobile-controls">
     <div class="dpad">
         <button class="ctrl-btn" id="btn-left">◀</button>
@@ -156,7 +162,6 @@
     </div>
 </div>
 
-<!-- ═══════════════ СКРИПТЫ ═══════════════ -->
 <script src="audio.js"></script>
 <script src="level-generator.js"></script>
 <script src="level.js"></script>

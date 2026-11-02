@@ -12,7 +12,6 @@
 <link rel="stylesheet" href="menu.css">
 
 <style>
-    /* Заголовок страницы */
     .page-title {
         font-family: 'Rubik One', sans-serif;
         font-size: clamp(28px, 4vw, 52px);
@@ -30,7 +29,6 @@
         100% { opacity: 1; transform: scale(1) translateY(0); }
     }
 
-    /* Список настроек — как пункты меню */
     .settings-list {
         display: flex;
         flex-direction: column;
@@ -56,13 +54,13 @@
         opacity: 0;
         animation: fadeUp 0.7s cubic-bezier(0.34,1.3,0.64,1) forwards;
         transition: color 0.3s ease;
+        width: 100%;
     }
     .setting-item:nth-child(1) { animation-delay: 0.5s; }
     .setting-item:nth-child(2) { animation-delay: 0.65s; }
     .setting-item:nth-child(3) { animation-delay: 0.8s; }
     .setting-item:hover { color: #fff5e0; }
 
-    /* Обводка-круг при наведении */
     .setting-item::before {
         content: '';
         position: absolute;
@@ -87,7 +85,6 @@
         z-index: 2;
     }
 
-    /* Свитч */
     .switch {
         position: relative;
         display: inline-block;
@@ -121,12 +118,11 @@
         box-shadow: 0 0 12px rgba(100,255,200,0.7);
     }
 
-    /* Поле ввода ника — как строка настроек */
     .nick-input-wrap {
         position: relative;
         display: flex;
         align-items: center;
-        justify-content: flex-end;
+        justify-content: center;
         padding: 10px 44px;
         opacity: 0;
         animation: fadeUp 0.7s cubic-bezier(0.34,1.3,0.64,1) 0.35s forwards;
@@ -158,7 +154,15 @@
         font-style: italic;
     }
 
-    /* Заголовок секции */
+    .color-input {
+        width: 60px;
+        height: 36px;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        padding: 0;
+    }
+
     .section-label {
         font-family: 'Caveat', cursive;
         font-size: 18px;
@@ -196,9 +200,18 @@
         <div class="settings-list">
             <div class="section-label">Персонаж</div>
 
-            <!-- Ник -->
             <div class="nick-input-wrap">
                 <input type="text" class="nick-input" id="nickname-input" placeholder="Введите ник..." maxlength="16">
+            </div>
+
+            <div class="setting-item">
+                <span class="label">🎨 Цвет персонажа</span>
+                <input type="color" id="color-input" class="color-input" value="#ffd84a">
+            </div>
+
+            <div class="setting-item">
+                <span class="label">✏️ Цвет ника</span>
+                <input type="color" id="nick-color-input" class="color-input" value="#d0e0ff">
             </div>
 
             <div class="section-label">Камера</div>
@@ -230,8 +243,9 @@
         const settingCenter = document.getElementById('setting-center');
         const settingFollow = document.getElementById('setting-follow');
         const nicknameInput = document.getElementById('nickname-input');
+        const colorInput = document.getElementById('color-input');
+        const nickColorInput = document.getElementById('nick-color-input');
 
-        // Загрузка
         try {
             const saved = JSON.parse(localStorage.getItem('kz_settings') || '{}');
             if (typeof saved.centerMap === 'boolean') settingCenter.checked = saved.centerMap;
@@ -241,9 +255,12 @@
         try {
             const nick = localStorage.getItem('kz_nickname');
             if (nick) nicknameInput.value = nick;
+            const color = localStorage.getItem('kz_color');
+            if (color) colorInput.value = color;
+            const nickColor = localStorage.getItem('kz_nick_color');
+            if (nickColor) nickColorInput.value = nickColor;
         } catch (e) {}
 
-        // Сохранение настроек камеры
         function saveSettings() {
             localStorage.setItem('kz_settings', JSON.stringify({
                 centerMap: settingCenter.checked,
@@ -260,13 +277,20 @@
             saveSettings();
         });
 
-        // Сохранение ника
         nicknameInput.addEventListener('input', () => {
             const nick = nicknameInput.value.trim();
             try {
                 if (nick) localStorage.setItem('kz_nickname', nick);
                 else localStorage.removeItem('kz_nickname');
             } catch (e) {}
+        });
+
+        colorInput.addEventListener('input', () => {
+            try { localStorage.setItem('kz_color', colorInput.value); } catch (e) {}
+        });
+
+        nickColorInput.addEventListener('input', () => {
+            try { localStorage.setItem('kz_nick_color', nickColorInput.value); } catch (e) {}
         });
 
         nicknameInput.addEventListener('keydown', (e) => {

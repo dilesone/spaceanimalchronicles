@@ -22,6 +22,9 @@
     let myId = localStorage.getItem('kz_session_id') || null;
     let serverSeed = null;
     
+    let myPlayer = null;
+    const otherPlayers = {};
+    
     window.otherPlayers = {};
     window.otherNicknames = {};
 
@@ -73,12 +76,18 @@
                     if (data.seed && data.seed !== serverSeed) {
                         serverSeed = data.seed;
                         loadLevelBySeed(serverSeed).then(() => {
-                            Player.state.x = Level.playerStart.x;
-                            Player.state.y = Level.playerStart.y;
-                            Player.state.vx = 0; Player.state.vy = 0;
-                            Player.state.hasNut = false;
-                            Player.state.lives = Player.state.maxLives;
-                            Player.bindKeys();
+                            if (!myPlayer) {
+                                myPlayer = new PlayerClass(myId, true);
+                                myPlayer.loadNickname();
+                                myPlayer.bindKeys();
+                                window.myPlayer = myPlayer;
+                            }
+                            
+                            myPlayer.x = Level.playerStart.x;
+                            myPlayer.y = Level.playerStart.y;
+                            myPlayer.vx = 0; myPlayer.vy = 0;
+                            myPlayer.hasNut = false;
+                            myPlayer.lives = myPlayer.maxLives;
                             
                             if (data.collected) Level.state.collected = data.collected;
                             if (data.personal) Level.state.personal = data.personal;
@@ -87,9 +96,8 @@
                             const maxX = Level.pixelWidth() - viewW;
                             const maxY = Level.pixelHeight() - viewH;
                             if (settings.followPlayer) {
-                                const p = Player.state;
-                                camX = Math.max(0, Math.min(maxX, p.x + Player.PHYS.W / 2 - viewW / 2));
-                                camY = Math.max(0, Math.min(maxY, p.y + Player.PHYS.H / 2 - viewH / 2));
+                                camX = Math.max(0, Math.min(maxX, myPlayer.x + PlayerClass.PHYS.W / 2 - viewW / 2));
+                                camY = Math.max(0, Math.min(maxY, myPlayer.y + PlayerClass.PHYS.H / 2 - viewH / 2));
                             } else {
                                 camX = maxX / 2;
                                 camY = maxY / 2;
@@ -111,14 +119,29 @@
                 } 
                 else if (data.type === 'move') {
                     if (data.id !== myId) {
-                        window.otherPlayers[data.id] = { 
-                            x: data.x, y: data.y, facing: data.facing || 1,
-                            vx: data.vx || 0, vy: data.vy || 0,
-                            squash: data.squash || 1, skew: data.skew || 0,
-                            flipAngle: data.flipAngle || 0, flipSpeed: data.flipSpeed || 0,
-                            hasNut: data.hasNut || false, lastUpdate: Date.now() 
-                        };
-                        if (data.nickname) window.otherNicknames[data.id] = data.nickname;
+                        if (!otherPlayers[data.id]) {
+                            otherPlayers[data.id] = new PlayerClass(data.id, false);
+                            otherPlayers[data.id].nickname = data.nickname || 'Игрок';
+                        }
+                        const op = otherPlayers[data.id];
+                        
+                        op.targetX = data.x;
+                        op.targetY = data.y;
+                        op.facing = data.facing || 1;
+                        op.vx = data.vx || 0;
+                        op.vy = data.vy || 0;
+                        op.squash = data.squash || 1;
+                        op.skew = data.skew || 0;
+                        op.flipAngle = data.flipAngle || 0;
+                        op.flipSpeed = data.flipSpeed || 0;
+                        op.hasNut = data.hasNut || false;
+                        op.customColor = data.customColor || '#ffd84a';
+                        op.nickColor = data.nickColor || '#d0e0ff';
+                        op.nickname = data.nickname || 'Игрок';
+                        op.lastUpdate = Date.now();
+                        
+                        window.otherPlayers[data.id] = op;
+                        window.otherNicknames[data.id] = op.nickname;
                     }
                 }
                 else if (data.type === 'player_collected') {
@@ -138,7 +161,7 @@
                     if (itemType === 'nut') {
                         if (data.id === myId) {
                             Level.setTile(data.gx, data.gy, Level.TILE.EMPTY);
-                            Player.state.hasNut = true;
+                            if (myPlayer) myPlayer.hasNut = true;
                         }
                     }
                     
@@ -148,6 +171,7 @@
                     updateHUD();
                 }
                 else if (data.type === 'player_finished') {
+                    delete otherPlayers[data.id];
                     delete window.otherPlayers[data.id];
                     delete window.otherNicknames[data.id];
                     addChatMessage('Система', `${data.nickname || data.id} дошел до портала!`, true);
@@ -165,25 +189,23 @@
                 }
                 else if (data.type === 'next_level') {
                     console.log('Переход на новый уровень!');
-                    
-                    // Сохраняем флаг, что это переход, и комнату
                     sessionStorage.setItem('kz_after_finish', '1');
                     localStorage.setItem('kz_current_room', roomName);
-                    
-                    // Перезагружаем страницу (чистое состояние)
                     location.reload();
                 }
             } catch (e) { console.error('Ошибка:', e); }
         };
 
         socket.onclose = () => {
-            window.otherPlayers = {};
-            window.otherNicknames = {};
+            for (const id in otherPlayers) {
+                delete otherPlayers[id];
+                delete window.otherPlayers[id];
+                delete window.otherNicknames[id];
+            }
             setTimeout(() => connectToServer(roomName), 2000);
         };
     }
 
-    // ─── ЗАГРУЗКА УРОВНЯ ──────────────────────────────────
     function loadLevelBySeed(seedToUse) {
         const mode = localStorage.getItem('kz_play_mode') || 'fixed';
         let theme = 'forest';
@@ -234,6 +256,8 @@
     const settingCenter = document.getElementById('setting-center');
     const settingFollow = document.getElementById('setting-follow');
     const pauseNickname = document.getElementById('pause-nickname');
+    const pauseColor = document.getElementById('pause-color');
+    const pauseNickColor = document.getElementById('pause-nick-color');
     const btnWait = document.getElementById('btn-wait');
     const btnLeaveAlone = document.getElementById('btn-leave-alone');
     const btnSoloNext = document.getElementById('btn-solo-next');
@@ -275,7 +299,7 @@
         if (hudBerries) hudBerries.textContent = `${s.berries} / ${Level.state.totalBerries}`;
         if (hudCrystals) hudCrystals.textContent = `${s.crystals} / ${Level.state.totalCrystals}`;
         if (hudNuts) hudNuts.textContent = `${s.nuts} / ${Level.state.totalNuts}`;
-        if (hudLives) hudLives.textContent = '❤️'.repeat(Math.max(0, Player.state.lives));
+        if (hudLives && myPlayer) hudLives.textContent = '❤️'.repeat(Math.max(0, myPlayer.lives));
 
         if (hudPersonal) {
             hudPersonal.textContent = `${p.berries + p.crystals + p.nuts}`;
@@ -292,10 +316,10 @@
     }
 
     function checkPickup() {
-        const p = Player.state;
+        if (!myPlayer) return;
         const T = Level.tileSize;
-        const gx = Math.floor((p.x + Player.PHYS.W / 2) / T);
-        const gy = Math.floor((p.y + Player.PHYS.H / 2) / T);
+        const gx = Math.floor((myPlayer.x + PlayerClass.PHYS.W / 2) / T);
+        const gy = Math.floor((myPlayer.y + PlayerClass.PHYS.H / 2) / T);
 
         const result = Level.collectAt(gx, gy);
         if (!result) return;
@@ -311,29 +335,28 @@
             if (window.Audio) Audio.play(1046, 0.15, 'triangle', 0.07);
             if (window.Particles) Particles.spawn(gx * T + T / 2, gy * T + T / 2, '#a8d8ff', 14, 5);
         } else if (result.type === 'nut') {
-            p.hasNut = true;
+            myPlayer.hasNut = true;
             if (window.Audio) Audio.play(660, 0.2, 'triangle', 0.1);
             if (window.Particles) Particles.spawn(gx * T + T / 2, gy * T + T / 2, '#ffcc33', 16, 5);
         }
     }
 
     function checkPortal() {
-        if (!portalOpen) return;
-        const p = Player.state;
+        if (!portalOpen || !myPlayer) return;
         const portal = Level.portal;
-        const cx = p.x + Player.PHYS.W / 2;
-        const cy = p.y + Player.PHYS.H / 2;
+        const cx = myPlayer.x + PlayerClass.PHYS.W / 2;
+        const cy = myPlayer.y + PlayerClass.PHYS.H / 2;
         const dx = (cx - (portal.x + portal.w / 2)) / (portal.w / 2);
         const dy = (cy - (portal.y + portal.h / 2)) / (portal.h / 2);
-        if ((dx * dx + dy * dy) <= 1 && p.hasNut) winLevel();
+        if ((dx * dx + dy * dy) <= 1 && myPlayer.hasNut) winLevel();
     }
 
     function winLevel() {
         window.__gameActive = false;
         paused = true;
 
-        if (socket && socket.readyState === WebSocket.OPEN) {
-            socket.send(JSON.stringify({ type: 'finish', id: myId, nickname: Player.state.nickname }));
+        if (socket && socket.readyState === WebSocket.OPEN && myPlayer) {
+            socket.send(JSON.stringify({ type: 'finish', id: myId, nickname: myPlayer.nickname }));
         }
 
         const s = Level.state.collected;
@@ -363,7 +386,9 @@
     function syncSettingsUI() {
         if (settingCenter) settingCenter.checked = settings.centerMap;
         if (settingFollow) settingFollow.checked = settings.followPlayer;
-        if (pauseNickname) pauseNickname.value = Player.state.nickname || 'Игрок';
+        if (pauseNickname && myPlayer) pauseNickname.value = myPlayer.nickname || 'Игрок';
+        if (pauseColor && myPlayer) pauseColor.value = myPlayer.customColor || '#ffd84a';
+        if (pauseNickColor && myPlayer) pauseNickColor.value = myPlayer.nickColor || '#d0e0ff';
     }
     syncSettingsUI();
 
@@ -387,19 +412,32 @@
     if (pauseNickname) {
         pauseNickname.addEventListener('input', () => {
             const nick = pauseNickname.value.trim() || 'Игрок';
-            Player.state.nickname = nick;
+            if (myPlayer) myPlayer.nickname = nick;
             try { localStorage.setItem('kz_nickname', nick); } catch (e) {}
         });
         pauseNickname.addEventListener('keydown', (e) => e.stopPropagation());
     }
 
+    if (pauseColor) {
+        pauseColor.addEventListener('input', () => {
+            if (myPlayer) myPlayer.customColor = pauseColor.value;
+            try { localStorage.setItem('kz_color', pauseColor.value); } catch (e) {}
+        });
+    }
+
+    if (pauseNickColor) {
+        pauseNickColor.addEventListener('input', () => {
+            if (myPlayer) myPlayer.nickColor = pauseNickColor.value;
+            try { localStorage.setItem('kz_nick_color', pauseNickColor.value); } catch (e) {}
+        });
+    }
+
     function updateCamera() {
         const maxX = Level.pixelWidth() - viewW;
         const maxY = Level.pixelHeight() - viewH;
-        if (settings.followPlayer) {
-            const p = Player.state;
-            camX += (p.x + Player.PHYS.W / 2 - viewW / 2 - camX) * 0.1;
-            camY += (p.y + Player.PHYS.H / 2 - viewH / 2 - camY) * 0.1;
+        if (settings.followPlayer && myPlayer) {
+            camX += (myPlayer.x + PlayerClass.PHYS.W / 2 - viewW / 2 - camX) * 0.1;
+            camY += (myPlayer.y + PlayerClass.PHYS.H / 2 - viewH / 2 - camY) * 0.1;
         } else {
             camX = maxX / 2; camY = maxY / 2;
         }
@@ -467,13 +505,13 @@
     if (chatInput) chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); sendChat(); } });
 
     function sendChat() {
-        if (!chatInput) return;
+        if (!chatInput || !myPlayer) return;
         const text = (chatInput.value || '').trim();
         if (!text) return;
         if (socket && socket.readyState === WebSocket.OPEN) {
-            socket.send(JSON.stringify({ type: 'chat', author: Player.state.nickname || 'Игрок', text: text }));
+            socket.send(JSON.stringify({ type: 'chat', author: myPlayer.nickname || 'Игрок', text: text }));
         }
-        addChatMessage(Player.state.nickname || 'Игрок', text);
+        addChatMessage(myPlayer.nickname || 'Игрок', text);
         chatInput.value = '';
     }
 
@@ -501,11 +539,11 @@
     } catch (e) {}
 
     function drawCompass() {
-        const p = Player.state;
-        const px = p.x + Player.PHYS.W / 2;
-        const py = p.y + Player.PHYS.H / 2;
+        if (!myPlayer) return;
+        const px = myPlayer.x + PlayerClass.PHYS.W / 2;
+        const py = myPlayer.y + PlayerClass.PHYS.H / 2;
 
-        if (!p.hasNut && Level.state.collected.nuts < Level.state.totalNuts) {
+        if (!myPlayer.hasNut && Level.state.collected.nuts < Level.state.totalNuts) {
             let nutPos = null;
             for (let y = 0; y < Level.height; y++) {
                 for (let x = 0; x < Level.width; x++) {
@@ -563,21 +601,23 @@
 
         isLoopRunning = true;
 
-        if (!paused) {
-            Player.update();
+        if (!paused && myPlayer) {
+            myPlayer.update();
             checkPickup();
             checkPortal();
             updateCamera();
             Tiles.updateParticles();
         }
 
-        if (socket && socket.readyState === WebSocket.OPEN && myId) {
+        if (socket && socket.readyState === WebSocket.OPEN && myPlayer) {
             socket.send(JSON.stringify({
-                type: 'move', id: myId, nickname: Player.state.nickname || 'Игрок',
-                x: Player.state.x, y: Player.state.y, facing: Player.state.facing,
-                vx: Player.state.vx, vy: Player.state.vy, squash: Player.state.squash,
-                skew: Player.state.skew, flipAngle: Player.state.flipAngle,
-                flipSpeed: Player.state.flipSpeed, hasNut: Player.state.hasNut
+                type: 'move', id: myId, nickname: myPlayer.nickname || 'Игрок',
+                x: myPlayer.x, y: myPlayer.y, facing: myPlayer.facing,
+                vx: myPlayer.vx, vy: myPlayer.vy, squash: myPlayer.squash,
+                skew: myPlayer.skew, flipAngle: myPlayer.flipAngle,
+                flipSpeed: myPlayer.flipSpeed, hasNut: myPlayer.hasNut,
+                customColor: myPlayer.customColor || '#ffd84a',
+                nickColor: myPlayer.nickColor || '#d0e0ff'
             }));
         }
 
@@ -588,18 +628,21 @@
         Tiles.drawParticles(ctx);
         
         const now = Date.now();
-        for (const id in window.otherPlayers) {
+        for (const id in otherPlayers) {
             if (id === myId) continue;
-            const op = window.otherPlayers[id];
+            const op = otherPlayers[id];
             if (!op.lastUpdate || now - op.lastUpdate > 2500) {
-                delete window.otherPlayers[id]; delete window.otherNicknames[id]; continue;
+                delete otherPlayers[id];
+                delete window.otherPlayers[id];
+                delete window.otherNicknames[id];
+                continue;
             }
-            const original = { x: Player.state.x, y: Player.state.y, facing: Player.state.facing, vx: Player.state.vx, vy: Player.state.vy, squash: Player.state.squash, skew: Player.state.skew, flipAngle: Player.state.flipAngle, flipSpeed: Player.state.flipSpeed, hasNut: Player.state.hasNut, nickname: Player.state.nickname };
-            Player.state.x = op.x; Player.state.y = op.y; Player.state.facing = op.facing; Player.state.vx = op.vx; Player.state.vy = op.vy; Player.state.squash = op.squash; Player.state.skew = op.skew; Player.state.flipAngle = op.flipAngle; Player.state.flipSpeed = op.flipSpeed; Player.state.hasNut = op.hasNut; Player.state.nickname = window.otherNicknames[id] || id;
-            Player.draw(ctx);
-            Player.state.x = original.x; Player.state.y = original.y; Player.state.facing = original.facing; Player.state.vx = original.vx; Player.state.vy = original.vy; Player.state.squash = original.squash; Player.state.skew = original.skew; Player.state.flipAngle = original.flipAngle; Player.state.flipSpeed = original.flipSpeed; Player.state.hasNut = original.hasNut; Player.state.nickname = original.nickname;
+            op.update();
+            op.draw(ctx);
         }
-        Player.draw(ctx);
+        
+        if (myPlayer) myPlayer.draw(ctx);
+        
         ctx.restore();
 
         if (!paused) drawCompass();
@@ -611,7 +654,6 @@
         isLoopRunning = false;
         document.addEventListener('click', () => { if (window.Audio) Audio.init(); }, { once: true });
         window.addEventListener('keydown', () => { if (window.Audio) Audio.init(); }, { once: true });
-        if (window.Player && Player.reloadNickname) Player.reloadNickname();
         
         ctx.fillStyle = '#a8c8ff';
         ctx.font = '24px sans-serif';
@@ -674,6 +716,5 @@
         if (socket && socket.readyState === WebSocket.OPEN) socket.close();
     });
 
-    // ─── СТАРТ ────────────────────────────────────────────
     start();
 })();

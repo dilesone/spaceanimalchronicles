@@ -541,8 +541,10 @@
             for (let y = 1; y < H - 1; y++) {
                 for (let x = 1; x < W - 1; x++) {
                     if (grid[y][x] !== TILE.EMPTY) continue;
+                    
                     freeCells.push({ x, y });
-                    if (grid[y + 1] && (grid[y + 1][x] === TILE.WALL || grid[y + 1][x] === TILE.PLATFORM)) {
+                    
+                    if (grid[y + 1] && grid[y + 1][x] === TILE.WALL) {
                         groundCells.push({ x, y });
                     }
                     if (grid[y + 1] && grid[y + 1][x] === TILE.PLATFORM) {
@@ -558,13 +560,17 @@
                 }
                 return arr;
             };
+            
             shuffle(freeCells);
             shuffle(groundCells);
             shuffle(platformCells);
 
             const reachableGround = groundCells.filter(c => canReach(grid, W, H, startCell, c));
-            const reachableFree = freeCells.filter(c => canReach(grid, W, H, startCell, c));
             const reachablePlatforms = platformCells.filter(c => canReach(grid, W, H, startCell, c));
+
+            // Объединяем платформы и землю в один общий пул и перемешиваем
+            const allValidCells = reachableGround.concat(reachablePlatforms);
+            shuffle(allValidCells);
 
             let berries = 0, crystals = 0, nutPos = null;
 
@@ -576,117 +582,40 @@
                 return true;
             };
 
-            const patterns = ['clusters', 'arc', 'columns', 'zigzag', 'scattered'];
-            const chosenPattern = patterns[Math.floor(rng() * patterns.length)];
+            // 1. Рандомно ставим ягоды (и на землю, и на платформы)
+            for (const c of allValidCells) {
+                if (berries >= config.totalBerries) break;
+                if (placeItem(c.x, c.y, TILE.BERRY)) berries++;
+            }
 
-            if (chosenPattern === 'clusters') {
-                const pool = reachableGround.slice();
-                while ((berries < config.totalBerries || crystals < config.totalCrystals) && pool.length > 0) {
-                    const c = pool.splice(Math.floor(rng() * pool.length), 1)[0];
-                    const clusterSize = 2 + Math.floor(rng() * 2);
-                    let placedInCluster = 0;
-                    for (let dx = 0; dx < clusterSize && (berries < config.totalBerries || crystals < config.totalCrystals); dx++) {
-                        const x = c.x + dx;
-                        let type = berries < config.totalBerries ? TILE.BERRY : TILE.CRYSTAL;
-                        if (placeItem(x, c.y, type)) {
-                            if (type === TILE.BERRY) berries++;
-                            else crystals++;
-                            placedInCluster++;
-                        }
-                    }
-                    if (placedInCluster === 0) break;
-                }
-            }
-            else if (chosenPattern === 'arc') {
-                const centers = reachableGround.slice(0, 15);
-                for (const center of centers) {
-                    if (berries >= config.totalBerries && crystals >= config.totalCrystals) break;
-                    const arcSize = 3 + Math.floor(rng() * 3);
-                    for (let i = 0; i < arcSize; i++) {
-                        const offset = i - Math.floor(arcSize / 2);
-                        const arcX = center.x + offset;
-                        const arcY = center.y - Math.abs(offset) - 2;
-                        if (berries < config.totalBerries) {
-                            if (placeItem(arcX, arcY, TILE.BERRY)) berries++;
-                        } else if (crystals < config.totalCrystals) {
-                            if (placeItem(arcX, arcY, TILE.CRYSTAL)) crystals++;
-                        }
-                    }
-                }
-                for (const c of reachableGround) {
-                    if (berries >= config.totalBerries && crystals >= config.totalCrystals) break;
-                    if (berries < config.totalBerries) { if (placeItem(c.x, c.y, TILE.BERRY)) berries++; }
-                    else if (crystals < config.totalCrystals) { if (placeItem(c.x, c.y, TILE.CRYSTAL)) crystals++; }
-                }
-            }
-            else if (chosenPattern === 'columns') {
-                for (const p of reachablePlatforms) {
-                    if (berries >= config.totalBerries && crystals >= config.totalCrystals) break;
-                    const colSize = 2 + Math.floor(rng() * 2);
-                    for (let dy = 0; dy < colSize; dy++) {
-                        if (berries < config.totalBerries) { if (placeItem(p.x, p.y - dy, TILE.BERRY)) berries++; }
-                        else if (crystals < config.totalCrystals) { if (placeItem(p.x, p.y - dy, TILE.CRYSTAL)) crystals++; }
-                    }
-                }
-                for (const c of reachableGround) {
-                    if (berries >= config.totalBerries && crystals >= config.totalCrystals) break;
-                    if (berries < config.totalBerries) { if (placeItem(c.x, c.y, TILE.BERRY)) berries++; }
-                    else if (crystals < config.totalCrystals) { if (placeItem(c.x, c.y, TILE.CRYSTAL)) crystals++; }
-                }
-            }
-            else if (chosenPattern === 'zigzag') {
-                const pool = reachableFree.slice();
-                let prevY = -1;
-                for (const c of pool) {
-                    if (berries >= config.totalBerries && crystals >= config.totalCrystals) break;
-                    if (prevY !== -1 && Math.abs(c.y - prevY) < 2) continue;
-                    prevY = c.y;
-                    if (berries < config.totalBerries) { if (placeItem(c.x, c.y, TILE.BERRY)) berries++; }
-                    else if (crystals < config.totalCrystals) { if (placeItem(c.x, c.y, TILE.CRYSTAL)) crystals++; }
-                }
-            }
-            else {
-                for (const c of reachableGround) {
-                    if (berries >= config.totalBerries && crystals >= config.totalCrystals) break;
-                    if (rng() < 0.5) continue;
-                    if (berries < config.totalBerries) { if (placeItem(c.x, c.y, TILE.BERRY)) berries++; }
-                    else if (crystals < config.totalCrystals) { if (placeItem(c.x, c.y, TILE.CRYSTAL)) crystals++; }
+            // 2. Рандомно ставим кристаллы
+            for (const c of allValidCells) {
+                if (crystals >= config.totalCrystals) break;
+                if (grid[c.y][c.x] === TILE.EMPTY) {
+                    if (placeItem(c.x, c.y, TILE.CRYSTAL)) crystals++;
                 }
             }
 
-            const nutCandidates = reachableGround.filter(c => {
+            // 3. Ставим орех (подальше от старта)
+            const nutCandidates = allValidCells.filter(c => {
                 if (grid[c.y][c.x] !== TILE.EMPTY) return false;
                 const distToStart = Math.abs(c.x - startGx) + Math.abs(c.y - startGy);
                 return distToStart > 15;
             });
+            
             for (const c of nutCandidates) {
                 if (placeItem(c.x, c.y, TILE.NUT)) { nutPos = c; break; }
             }
             if (!nutPos && config.totalNuts > 0) {
-                for (const c of reachableGround) {
-                    if (placeItem(c.x, c.y, TILE.NUT)) { nutPos = c; break; }
+                for (const c of allValidCells) {
+                    if (grid[c.y][c.x] === TILE.EMPTY) {
+                        if (placeItem(c.x, c.y, TILE.NUT)) { nutPos = c; break; }
+                    }
                 }
             }
 
             if (berries < config.totalBerries || crystals < config.totalCrystals ||
                 (config.totalNuts > 0 && !nutPos)) continue;
-
-            bestResult = {
-                grid, playerStart, portal,
-                totalBerries: berries, totalCrystals: crystals,
-                totalNuts: nutPos ? 1 : 0,
-                theme: config.theme, seed: config.seed,
-                width: W, height: H, tileSize,
-                terrain: config.terrain,
-                pattern: chosenPattern,
-                attempts: attempt + 1
-            };
-            break;
-        }
-
-        if (!bestResult) bestResult = fallbackLevel(config);
-        return bestResult;
-    }
 
     // ═══════════════ FALLBACK ═══════════════
     function fallbackLevel(config) {

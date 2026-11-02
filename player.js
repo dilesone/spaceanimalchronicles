@@ -412,15 +412,6 @@
                 ctx.fillText(this.nickname, cx, nickY);
                 ctx.restore();
             }
-
-            for (let i = 0; i < 2; i++) {
-                ctx.globalAlpha = i < this.jumpsLeft ? 0.9 : 0.2;
-                ctx.fillStyle = '#00e676';
-                ctx.beginPath();
-                ctx.arc(px + 10 + i * 14, py - 28, 4, 0, Math.PI * 2);
-                ctx.fill();
-            }
-            ctx.globalAlpha = 1;
         }
     }
 

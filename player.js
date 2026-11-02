@@ -21,28 +21,23 @@
             this.id = id;
             this.isLocal = isLocal;
             
-            // Позиция и физика
             this.x = 80; this.y = 600;
             this.vx = 0; this.vy = 0;
             this.onGround = false;
             this.facing = 1;
             
-            // Прыжки
             this.jumpsLeft = 2;
             this.coyote = 0;
             this.jumpBuffer = 0;
             this.jumpHeld = false;
             
-            // Рывок
             this.dashTime = 0;
             this.dashCooldown = 0;
             this.dashDirX = 0;
             
-            // Урон
             this.invuln = 0;
             this.touchWall = 0;
             
-            // Анимация
             this.squash = 1;
             this.skew = 0;
             this.skewDir = 0;
@@ -51,22 +46,18 @@
             this.flipSpeed = 0;
             this.flipDir = 1;
             
-            // Состояние
             this.inWater = false;
             this.hasNut = false;
             this.lives = 3;
             this.maxLives = 3;
             
-            // Внешний вид
             this.nickname = 'Игрок';
             this.customColor = '#ffd84a';
             this.nickColor = '#d0e0ff';
             
-            // Интерполяция для чужих
             this.targetX = 80;
             this.targetY = 600;
             
-            // Клавиши (для локального)
             this.keys = { left: false, right: false, jump: false, dash: false };
         }
 
@@ -207,7 +198,6 @@
         }
 
         update() {
-            // Для чужих только интерполяция
             if (!this.isLocal) {
                 this.x += (this.targetX - this.x) * 0.2;
                 this.y += (this.targetY - this.y) * 0.2;
@@ -434,6 +424,9 @@
         }
     }
 
+    // ═══ ДОБАВЛЯЕМ PHYS В КЛАСС, ЧТОБЫ PlayerClass.PHYS.W РАБОТАЛ ═══
+    Player.PHYS = PHYS;
+    
     window.PlayerClass = Player;
     window.Player = {
         PHYS,

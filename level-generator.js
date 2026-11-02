@@ -9,7 +9,6 @@
         hard:   { pits: 7, platforms: 26, lakes: 3, spikes: 7, maxHeight: 6, islands: 4 }
     };
 
-    // Параметры генерации для разных тем
     const THEME_PARAMS = {
         forest:    { baseHeight: 0.7,  hillsFreq: 0.25, hillsAmp: 4, caveCount: 2, waterChance: 0.8 },
         desert:    { baseHeight: 0.6,  hillsFreq: 0.1,  hillsAmp: 2, caveCount: 0, waterChance: 0.1 },
@@ -187,7 +186,6 @@
             for (let y = heights[x]; y < H - 1; y++) grid[y][x] = TILE.WALL;
         }
 
-        // Пещеры в земле
         const caveCount = Math.floor(rng() * (themeParams.caveCount + 1));
         for (let i = 0; i < caveCount; i++) {
             const cx = 8 + Math.floor(rng() * (W - 16));
@@ -203,7 +201,6 @@
             }
         }
 
-        // Ямы
         const pits = [];
         for (let i = 0; i < config.pits; i++) {
             const px = 6 + Math.floor(rng() * (W - 16));
@@ -220,7 +217,6 @@
             pits.push({ x: px, width: pw, top: heights[px] });
         }
 
-        // Платформы
         const platforms = [];
         const platformsCount = config.platforms + Math.floor(rng() * 6);
         for (let i = 0; i < platformsCount; i++) {
@@ -244,7 +240,6 @@
         }
         addPlatforms(grid, platforms);
 
-        // Парящие острова
         const islandCount = config.islands || 3;
         for (let i = 0; i < islandCount; i++) {
             for (let attempt = 0; attempt < 40; attempt++) {
@@ -280,7 +275,6 @@
             }
         }
 
-        // Вода
         for (let i = 0; i < config.lakes && i < pits.length; i++) {
             if (rng() > themeParams.waterChance) continue;
             const pit = pits[i];
@@ -295,7 +289,6 @@
 
         placeSpikes(rng, W, H, config, heights, grid);
 
-        // Портал
         let portalGx = W - 5, portalGy = -1;
         for (let x = W - 5; x > W - 15; x--) {
             if (heights[x] === undefined) continue;
@@ -313,8 +306,7 @@
 
         return { grid, heights, startX: 3, startY: heights[3] - 1, portalX: portalGx, portalY: portalGy };
     }
-    // ═══════════════ ТИП 2: АРХИПЕЛАГ ═══════════════
-    function generateIslands(rng, W, H, config) {
+        function generateIslands(rng, W, H, config) {
         const grid = Array.from({ length: H }, () => Array(W).fill(TILE.EMPTY));
         fillBorders(grid, W, H);
 
@@ -390,7 +382,6 @@
         };
     }
 
-    // ═══════════════ ТИП 3: ПЕЩЕРЫ ═══════════════
     function generateCaves(rng, W, H, config) {
         const grid = Array.from({ length: H }, () => Array(W).fill(TILE.WALL));
         fillBorders(grid, W, H);
@@ -464,7 +455,6 @@
         };
     }
 
-    // ═══════════════ ГЛАВНЫЙ ГЕНЕРАТОР ═══════════════
     function generate(options) {
         const config = Object.assign({
             theme: 'forest',
@@ -617,7 +607,22 @@
             if (berries < config.totalBerries || crystals < config.totalCrystals ||
                 (config.totalNuts > 0 && !nutPos)) continue;
 
-    // ═══════════════ FALLBACK ═══════════════
+            bestResult = {
+                grid, playerStart, portal,
+                totalBerries: berries, totalCrystals: crystals,
+                totalNuts: nutPos ? 1 : 0,
+                theme: config.theme, seed: config.seed,
+                width: W, height: H, tileSize,
+                terrain: config.terrain,
+                attempts: attempt + 1
+            };
+            break;
+        }
+
+        if (!bestResult) bestResult = fallbackLevel(config);
+        return bestResult;
+    }
+
     function fallbackLevel(config) {
         const W = config.width || 40;
         const H = config.height || 40;
@@ -683,4 +688,4 @@
     }
 
     window.LevelGenerator = { TILE, DIFFICULTY, generate, canReach, mulberry32 };
-})();    
+})();

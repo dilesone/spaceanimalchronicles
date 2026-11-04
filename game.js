@@ -901,7 +901,7 @@
             qPressed = false;
             clearTimeout(holdTimer);
             if (isWheelOpen && emoteWheel) {
-                emoteWheel.classList.remove('visible');
+                emoteWheel.classList.remove('visible'); // Убираем класс -> display становится none
                 isWheelOpen = false;
             }
         }

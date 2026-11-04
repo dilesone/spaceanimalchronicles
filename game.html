@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Космические Хроники Зверьков</title>
+<title>Лес — Космические Хроники Зверьков</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,10 +15,28 @@
 
 <canvas id="c"></canvas>
 
-<button class="back-btn" onclick="location.href='map.html'">← На карту</button>
+<!-- КАРТОЧКА ПИЛОТА (вместо кнопки "В меню") -->
+<div id="player-profile" class="player-profile">
+    <div class="profile-avatar" id="profile-avatar">
+        <!-- Сюда JS вставит цветной квадратик, глаза через CSS -->
+    </div>
+    <div class="profile-info">
+        <div class="profile-top">
+            <span class="profile-nick" id="profile-nick">Игрок</span>
+            <span class="profile-level" id="profile-level">Lvl 1</span>
+            <div class="profile-lives" id="profile-lives">❤️❤️❤️</div>
+            <button class="profile-menu-btn" id="profile-menu-btn" title="Пауза / Меню">⚙</button>
+        </div>
+        <div class="profile-xp-bar">
+            <div class="profile-xp-fill" id="profile-xp-fill"></div>
+            <span class="profile-xp-text" id="profile-xp-text">0 / 100 XP</span>
+        </div>
+    </div>
+</div>
 
+<!-- HUD (Ресурсы и Портал) -->
 <div id="hud">
-    <div class="hud-item lives">
+    <div class="hud-item lives" style="display: none;"> <!-- Скрыли, так как жизни теперь в профиле -->
         <span class="icon">❤️</span>
         <span class="value" id="hud-lives">❤️❤️❤️</span>
     </div>
@@ -122,6 +140,7 @@
                 <label class="pause-nick-label">👤 Ник персонажа</label>
                 <input type="text" id="pause-nickname" class="pause-nick-input" maxlength="16" placeholder="Игрок">
             </div>
+            
             <div class="setting-item">
                 <span class="label">🎯 Центрирование карты</span>
                 <label class="switch">

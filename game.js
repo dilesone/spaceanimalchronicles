@@ -523,12 +523,17 @@
         if (!chatInput || !myPlayer) return;
         const text = (chatInput.value || '').trim();
         if (!text) return;
+        
+        // Показываем пузырь у себя
+        myPlayer.chatBubble = text;
+        myPlayer.chatBubbleTime = Date.now();
+        
         if (socket && socket.readyState === WebSocket.OPEN) {
             socket.send(JSON.stringify({ 
                 type: 'chat', 
                 author: myPlayer.nickname || 'Игрок', 
                 text: text,
-                color: myPlayer.nickColor || '#88ffcc' // <--- ЦВЕТ НИКА
+                color: myPlayer.nickColor || '#88ffcc'
             }));
         }
         addChatMessage(myPlayer.nickname || 'Игрок', text, false, myPlayer.nickColor);

@@ -101,6 +101,7 @@
                             if (data.collected) Level.state.collected = data.collected;
                             if (data.personal) Level.state.personal = data.personal;
                             updateHUD();
+                            startRoundTimer(); // <--- ДОБАВИТЬ ЭТУ СТРОКУ
                             
                             const maxX = Level.pixelWidth() - viewW;
                             const maxY = Level.pixelHeight() - viewH;
@@ -797,7 +798,33 @@
         });
     }
 
-    // ─── КНОПКИ ───────────────────────────────────────────
+    function startRoundTimer() {
+        if (roundTimerInterval) clearInterval(roundTimerInterval);
+        roundTime = 300; // 5 минут
+        if (hudTimer) {
+            hudTimer.textContent = '05:00';
+            hudTimer.classList.remove('danger');
+        }
+
+        roundTimerInterval = setInterval(() => {
+            roundTime--;
+            const m = Math.floor(roundTime / 60).toString().padStart(2, '0');
+            const s = (roundTime % 60).toString().padStart(2, '0');
+            if (hudTimer) hudTimer.textContent = `${m}:${s}`;
+
+            if (roundTime <= 10) {
+                if (hudTimer) hudTimer.classList.add('danger');
+            } else {
+                if (hudTimer) hudTimer.classList.remove('danger');
+            }
+
+            if (roundTime <= 0) {
+                clearInterval(roundTimerInterval);
+                // Логика конца раунда (если нужна)
+            }
+        }, 1000);
+    }
+
     // ─── КНОПКИ ───────────────────────────────────────────
     if (btnNext) btnNext.addEventListener('click', () => { location.reload(); });
     if (btnRestart) btnRestart.addEventListener('click', () => location.reload());

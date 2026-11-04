@@ -414,6 +414,53 @@
                 ctx.fillText(this.nickname, cx, nickY);
                 ctx.restore();
             }
+
+                        // ─── ПУЗЫРЬ С СООБЩЕНИЕМ ──────────────────────
+            if (this.chatBubble && Date.now() - this.chatBubbleTime < 5000) {
+                const bubbleY = py - (this.hasNut ? 70 : 55);
+                
+                ctx.save();
+                ctx.font = '14px "Montserrat", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                const metrics = ctx.measureText(this.chatBubble);
+                const textW = metrics.width;
+                const padX = 10;
+                const padY = 6;
+                const bubbleW = textW + padX * 2;
+                const bubbleH = 24;
+                
+                // Фон пузыря
+                ctx.fillStyle = 'rgba(30, 30, 50, 0.95)';
+                ctx.strokeStyle = this.nickColor || '#88ffcc';
+                ctx.lineWidth = 2;
+                
+                ctx.beginPath();
+                if (ctx.roundRect) {
+                    ctx.roundRect(cx - bubbleW / 2, bubbleY - bubbleH, bubbleW, bubbleH, 8);
+                } else {
+                    ctx.rect(cx - bubbleW / 2, bubbleY - bubbleH, bubbleW, bubbleH);
+                }
+                ctx.fill();
+                ctx.stroke();
+                
+                // Хвостик
+                ctx.beginPath();
+                ctx.moveTo(cx - 6, bubbleY);
+                ctx.lineTo(cx, bubbleY + 8);
+                ctx.lineTo(cx + 6, bubbleY);
+                ctx.closePath();
+                ctx.fillStyle = 'rgba(30, 30, 50, 0.95)';
+                ctx.fill();
+                
+                // Текст
+                ctx.fillStyle = '#ffffff';
+                ctx.fillText(this.chatBubble, cx, bubbleY - bubbleH / 2);
+                ctx.restore();
+            }
+        }
+    }
         }
     }
 

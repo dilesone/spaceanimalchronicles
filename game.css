@@ -9,197 +9,122 @@ html, body {
 
 canvas#c { display: block; width: 100%; height: 100%; }
 
-/* ═══════════════ КАРТОЧКА ПИЛОТА ═══════════════ */
-.player-profile {
-    position: fixed;
-    top: 20px;
-    left: 20px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 10px 16px;
-    background: rgba(10, 10, 25, 0.75);
-    border: 1px solid rgba(100, 150, 255, 0.3);
-    border-radius: 16px;
-    backdrop-filter: blur(10px);
+/* ═══════════════ ВЕРХНИЙ HUD ═══════════════ */
+.hud-top {
+    position: fixed; top: 20px; left: 20px; right: 20px;
+    display: flex; justify-content: space-between; align-items: flex-start;
+    pointer-events: none;
     z-index: 100;
+}
+
+.hud-element {
+    height: 56px;
+    background: rgba(15, 15, 30, 0.75);
+    border: 1px solid rgba(100, 150, 255, 0.2);
+    border-radius: 12px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
     pointer-events: auto;
-    transition: all 0.3s;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    display: flex; align-items: center;
 }
 
-.profile-avatar {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    background: #ffd84a;
-    border: 2px solid #fff;
-    box-shadow: 0 0 15px currentColor;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    overflow: hidden;
-    transition: background 0.3s;
-}
-
-/* Глаза внутри аватара */
-.profile-avatar::before, .profile-avatar::after {
-    content: '';
-    position: absolute;
-    width: 10px;
-    height: 14px;
-    background: #1a1a2e;
-    border-radius: 5px;
-    top: 15px;
-}
-.profile-avatar::before { left: 9px; }
-.profile-avatar::after { right: 9px; }
-
-.profile-info {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.profile-top {
-    display: flex;
-    align-items: center;
+/* ─── ПРОФИЛЬ ─── */
+.profile-card {
+    padding: 0 16px 0 8px;
     gap: 10px;
 }
-
-.profile-nick {
-    font-family: 'Caveat', cursive;
-    font-size: 22px;
-    color: #d0e0ff;
-    text-shadow: 0 2px 5px rgba(0,0,0,0.8);
-    max-width: 150px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.profile-level {
-    font-size: 11px;
-    font-weight: 700;
-    background: rgba(100, 255, 200, 0.2);
-    color: #88ffcc;
-    padding: 2px 6px;
-    border-radius: 4px;
-    border: 1px solid rgba(100, 255, 200, 0.4);
-}
-
-.profile-lives {
-    font-size: 14px;
-    letter-spacing: 2px;
-    margin-left: auto;
-}
-
-.profile-menu-btn {
-    background: transparent;
-    border: none;
-    color: #8a9ac8;
-    font-size: 20px;
-    cursor: pointer;
-    padding: 0 4px;
-    transition: color 0.2s, transform 0.2s;
-}
-.profile-menu-btn:hover {
-    color: #fff;
-    transform: scale(1.1) rotate(45deg);
-}
-
-.profile-xp-bar {
-    width: 180px;
-    height: 8px;
-    background: rgba(0, 0, 0, 0.5);
-    border-radius: 4px;
-    overflow: hidden;
+.avatar {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: #ffd84a; /* Будет меняться через JS */
     position: relative;
-    border: 1px solid rgba(100, 150, 255, 0.2);
+    border: 2px solid rgba(255,255,255,0.8); 
+    box-shadow: 0 0 10px rgba(255, 216, 74, 0.4);
+    flex-shrink: 0;
+    margin-left: 4px;
+    transition: background 0.3s, box-shadow 0.3s;
 }
-
-.profile-xp-fill {
-    height: 100%;
-    width: 0%;
-    background: linear-gradient(90deg, #ffd84a, #ffcc33);
-    transition: width 0.3s ease-out;
-    box-shadow: 0 0 10px rgba(255, 216, 74, 0.5);
+.avatar::before, .avatar::after {
+    content: ''; position: absolute; width: 7px; height: 10px; background: #1a1a2e; border-radius: 3px; top: 14px;
 }
+.avatar::before { left: 8px; } .avatar::after { right: 8px; }
 
-.profile-xp-text {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 8px;
-    font-weight: 700;
-    color: #fff;
-    text-shadow: 0 1px 2px #000;
-    white-space: nowrap;
-    letter-spacing: 0.5px;
-}
+.profile-info { display: flex; flex-direction: column; gap: 3px; justify-content: center; height: 100%; }
+.profile-name { font-family: 'Caveat', cursive; font-size: 20px; font-weight: 700; color: #88ffcc; line-height: 1; }
+.profile-stats { display: flex; align-items: center; gap: 8px; font-size: 10px; color: #8a9ac8; font-weight: 600; text-transform: uppercase; }
+.profile-xp { width: 90px; height: 3px; background: rgba(0,0,0,0.5); border-radius: 2px; margin-top: 2px; }
+.profile-xp-fill { width: 0%; height: 100%; background: #88ffcc; border-radius: 2px; box-shadow: 0 0 5px #88ffcc; transition: width 0.3s; }
 
-/* ═══════════════ HUD ═══════════════ */
-#hud {
-    position: fixed; top: 16px; left: 50%;
-    transform: translateX(-50%);
-    display: flex; gap: 10px; align-items: center;
-    padding: 10px 16px;
-    background: rgba(10, 10, 25, 0.8);
-    border: 1px solid rgba(100, 150, 255, 0.35);
-    border-radius: 16px;
-    backdrop-filter: blur(12px);
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
-    z-index: 50;
-    font-size: 14px; font-weight: 600; color: #fff;
-    flex-wrap: wrap;
+/* ─── ЦЕНТР ─── */
+.center-group { display: flex; gap: 12px; }
+
+.timer-box {
+    padding: 0 20px;
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    color: #d0e0ff;
+    text-shadow: 0 0 8px rgba(208, 224, 255, 0.4);
+    font-variant-numeric: tabular-nums;
+    transition: all 0.3s;
     justify-content: center;
-    max-width: 90vw;
 }
-
-#hud .hud-item {
-    display: flex; align-items: center; gap: 6px;
-    padding: 6px 12px;
-    border-radius: 10px;
-    background: rgba(100, 150, 255, 0.08);
-    border: 1px solid rgba(100, 150, 255, 0.2);
-    white-space: nowrap;
-}
-#hud .hud-item .icon {
-    font-size: 16px;
-    filter: drop-shadow(0 0 5px currentColor);
-}
-#hud .hud-item .value {
-    color: #a8c8ff;
-    font-weight: 700;
-}
-
-#hud .hud-item.portal {
-    background: rgba(255, 100, 150, 0.1);
-    border-color: rgba(255, 100, 150, 0.3);
-}
-#hud .hud-item.portal .label {
-    color: #8a9ac8;
-    font-size: 11px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-}
-#hud .hud-item.portal .value { font-weight: 700; }
-
-#hud .hud-item.lives {
-    background: rgba(255, 100, 150, 0.1);
-    border-color: rgba(255, 100, 150, 0.3);
-}
-#hud .hud-item.lives .value {
+.timer-box.danger {
     color: #ff7088;
-    font-size: 16px;
-    letter-spacing: 2px;
+    border-color: rgba(255, 100, 150, 0.4);
+    text-shadow: 0 0 10px rgba(255, 100, 150, 0.6);
+    animation: pulse-danger 1s infinite alternate;
 }
+@keyframes pulse-danger {
+    from { opacity: 0.8; }
+    to { opacity: 1; }
+}
+
+.portal-block {
+    padding: 0 16px;
+    gap: 12px;
+    min-width: 180px;
+    transition: all 0.3s;
+}
+.portal-icon { font-size: 18px; color: #8a9ac8; transition: all 0.3s; }
+.portal-data { display: flex; flex-direction: column; gap: 6px; flex: 1; }
+.portal-title {
+    font-size: 10px; font-weight: 700; letter-spacing: 1px; color: #8a9ac8;
+    text-transform: uppercase; transition: all 0.3s;
+}
+.portal-bar-bg { width: 100%; height: 4px; background: rgba(0,0,0,0.5); border-radius: 2px; overflow: hidden; }
+.portal-bar-fill { width: 0%; height: 100%; background: #8a9ac8; border-radius: 2px; transition: all 0.3s; }
+
+.portal-block.open {
+    border-color: rgba(100, 255, 200, 0.4);
+    box-shadow: 0 0 15px rgba(100, 255, 200, 0.15);
+}
+.portal-block.open .portal-icon,
+.portal-block.open .portal-title { color: #88ffcc; text-shadow: 0 0 8px #88ffcc; }
+.portal-block.open .portal-bar-fill {
+    background: #88ffcc; box-shadow: 0 0 8px #88ffcc;
+    animation: pulse-green 1s infinite alternate;
+}
+@keyframes pulse-green { from { opacity: 0.8; } to { opacity: 1; } }
+
+/* ─── ПРАВАЯ ЧАСТЬ ─── */
+.right-group { display: flex; gap: 12px; }
+.resources { padding: 0 16px; gap: 15px; }
+.res-item { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; }
+.res-item .icon { font-size: 16px; filter: drop-shadow(0 0 3px rgba(255,255,255,0.2)); }
+.res-item .val { color: #a8c8ff; font-variant-numeric: tabular-nums; }
+.res-item.complete .val { color: #88ffcc; text-shadow: 0 0 5px rgba(136, 255, 204, 0.4); }
+
+.menu-btn {
+    width: 56px; justify-content: center; cursor: pointer; padding: 0; transition: all 0.2s;
+}
+.menu-btn:hover { background: rgba(100, 150, 255, 0.15); }
+.menu-icon { display: flex; flex-direction: column; gap: 4px; }
+.menu-icon span { display: block; width: 20px; height: 2px; background: #8a9ac8; border-radius: 1px; transition: all 0.2s; }
+.menu-btn:hover .menu-icon span { background: #fff; }
 
 /* ═══════════════ ПОДСКАЗКА УПРАВЛЕНИЯ ═══════════════ */
 .controls-hint {
-    position: fixed; top: 80px; right: 16px;
+    position: fixed; top: 90px; right: 20px;
     font-family: 'Caveat', cursive;
     font-size: 15px;
     color: #8a9ac8;
@@ -641,7 +566,7 @@ canvas#c { display: block; width: 100%; height: 100%; }
 /* ═══════════════ ЭМОЦИИ ═══════════════ */
 .emote-wheel {
     position: fixed; inset: 0;
-    display: none; /* <--- ЖЕСТКО СКРЫТ */
+    display: none;
     pointer-events: none; 
     opacity: 0;
     transition: opacity 0.15s ease;
@@ -649,7 +574,7 @@ canvas#c { display: block; width: 100%; height: 100%; }
     background: transparent;
 }
 .emote-wheel.visible {
-    display: block; /* <--- ПОКАЗЫВАЕМ ТОЛЬКО КОГДА НУЖНО */
+    display: block;
     opacity: 1;
     pointer-events: auto; 
 }
@@ -707,8 +632,6 @@ canvas#c { display: block; width: 100%; height: 100%; }
 
 /* ═══════════════ АДАПТИВ ═══════════════ */
 @media (max-width: 768px) {
-    #hud { font-size: 12px; padding: 8px 12px; }
-    #hud .hud-item { padding: 4px 8px; }
     .controls-hint { top: auto; bottom: 240px; right: 10px; font-size: 12px; padding: 4px 10px; }
     .chat { height: 180px; }
     .win-panel h1 { font-size: 28px; }
@@ -716,8 +639,15 @@ canvas#c { display: block; width: 100%; height: 100%; }
     .stats-block .stat-row { font-size: 18px; }
     .pause-settings .setting-item { font-size: 20px; padding: 6px 20px; }
     
-    .player-profile { padding: 6px 10px; gap: 8px; }
-    .profile-avatar { width: 36px; height: 36px; }
-    .profile-nick { font-size: 18px; }
-    .profile-xp-bar { width: 120px; }
+    .hud-top { top: 10px; left: 10px; right: 10px; }
+    .hud-element { height: 48px; }
+    .avatar { width: 32px; height: 32px; }
+    .profile-name { font-size: 16px; }
+    .profile-stats { font-size: 9px; }
+    .profile-xp { width: 70px; }
+    
+    .timer-box { font-size: 16px; padding: 0 10px; }
+    .portal-block { min-width: 140px; padding: 0 10px; gap: 8px; }
+    .resources { gap: 8px; padding: 0 10px; }
+    .res-item { font-size: 11px; }
 }

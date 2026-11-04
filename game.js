@@ -116,6 +116,20 @@
                 }
                 else if (data.type === 'chat') {
                     addChatMessage(data.author, data.text, false, data.color);
+                    
+                    // Ищем игрока по нику и показываем пузырь
+                    if (myPlayer && data.author === myPlayer.nickname) {
+                        myPlayer.chatBubble = data.text;
+                        myPlayer.chatBubbleTime = Date.now();
+                    } else {
+                        for (const id in otherPlayers) {
+                            if (otherPlayers[id].nickname === data.author) {
+                                otherPlayers[id].chatBubble = data.text;
+                                otherPlayers[id].chatBubbleTime = Date.now();
+                                break;
+                            }
+                        }
+                    }
                 }
                 else if (data.type === 'move') {
                     if (data.id !== myId) {

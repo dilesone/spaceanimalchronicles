@@ -422,12 +422,12 @@
                 
                 ctx.font = '12px "Montserrat", sans-serif';
                 ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle'; // Центрируем текст по вертикали
+                ctx.textBaseline = 'middle';
 
                 const maxWidth = 160; 
                 const lineHeight = 16; 
-                const padX = 16; // Чуть больше отступы по бокам
-                const padY = 10;
+                const padX = 12;
+                const padY = 8;
                 const maxLines = 4;
 
                 // 1. Разбиваем текст
@@ -463,19 +463,26 @@
                     lines[maxLines - 1] = last + '...';
                 }
 
-                // 2. Рассчитываем размеры
-                const bubbleW = maxWidth + padX * 2;
+                // 2. Вычисляем РЕАЛЬНУЮ ширину текста (чтобы пузырь не был пустым)
+                let actualMaxWidth = 0;
+                for (let i = 0; i < lines.length; i++) {
+                    const w = ctx.measureText(lines[i]).width;
+                    if (w > actualMaxWidth) actualMaxWidth = w;
+                }
+                
+                // Если текст короткий, пузырь будет маленьким
+                const bubbleW = Math.max(40, actualMaxWidth + padX * 2); 
                 const bubbleH = lines.length * lineHeight + padY * 2;
-                // Поднимаем пузырь повыше, чтобы хвостик влез
-                const bubbleY = py - (this.hasNut ? 75 : 65) - bubbleH;
-                const bubbleX = cx - bubbleW / 2;
+                
+                // 3. Позиционирование (сдвигаем влево и вверх)
+                const bubbleX = cx - bubbleW / 2 - 15; // Сдвиг влево от центра
+                const bubbleY = py - (this.hasNut ? 65 : 55) - bubbleH; // Поднимаем выше
 
-                // 3. Рисуем фон (Белое, почти непрозрачное облако)
+                // 4. Рисуем фон
                 ctx.fillStyle = 'rgba(255, 255, 255, 0.95)'; 
                 ctx.strokeStyle = 'rgba(200, 200, 200, 0.8)'; 
                 ctx.lineWidth = 1.5;
                 
-                // Основная плашка
                 ctx.beginPath();
                 if (ctx.roundRect) {
                     ctx.roundRect(bubbleX, bubbleY, bubbleW, bubbleH, 12);
@@ -485,29 +492,28 @@
                 ctx.fill();
                 ctx.stroke();
 
-                // 4. Рисуем "капельки" (хвостик мысли)
-                // Первая капелька (побольше)
-                const c1x = cx - 15;
-                const c1y = bubbleY + bubbleH + 6;
+                // 5. Рисуем капельки (мысли)
+                // Позиционируем их так, чтобы они вели к голове персонажа
+                const c1x = cx - 10;
+                const c1y = bubbleY + bubbleH + 8;
                 ctx.beginPath();
                 ctx.arc(c1x, c1y, 5, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.stroke();
 
-                // Вторая капелька (поменьше, ниже и левее)
-                const c2x = cx - 25;
-                const c2y = bubbleY + bubbleH + 15;
+                const c2x = cx - 5;
+                const c2y = bubbleY + bubbleH + 18;
                 ctx.beginPath();
                 ctx.arc(c2x, c2y, 2.5, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.stroke();
 
-                // 5. Текст
-                ctx.fillStyle = '#222222'; // Темно-серый текст
+                // 6. Текст (центрируем по пузырю)
+                ctx.fillStyle = '#222222';
+                const textCenterX = bubbleX + bubbleW / 2;
                 for (let i = 0; i < lines.length; i++) {
-                    // Сдвигаем текст так, чтобы он был по центру пузыря
                     const textY = bubbleY + padY + (i * lineHeight) + (lineHeight / 2);
-                    ctx.fillText(lines[i], cx, textY);
+                    ctx.fillText(lines[i], textCenterX, textY);
                 }
 
                 ctx.restore();

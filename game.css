@@ -9,23 +9,135 @@ html, body {
 
 canvas#c { display: block; width: 100%; height: 100%; }
 
-/* ═══════════════ КНОПКА "НАЗАД" ═══════════════ */
-.back-btn {
-    position: fixed; top: 20px; left: 20px; z-index: 100;
-    padding: 10px 20px;
-    font-family: 'Caveat', cursive; font-weight: 700; font-size: 22px;
-    color: #c8b8a8;
-    background: rgba(10, 10, 20, 0.6);
-    border: 1px solid rgba(200, 184, 168, 0.3);
-    border-radius: 10px;
-    cursor: pointer;
+/* ═══════════════ КАРТОЧКА ПИЛОТА ═══════════════ */
+.player-profile {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    background: rgba(10, 10, 25, 0.75);
+    border: 1px solid rgba(100, 150, 255, 0.3);
+    border-radius: 16px;
     backdrop-filter: blur(10px);
-    transition: all 0.2s;
+    z-index: 100;
+    pointer-events: auto;
+    transition: all 0.3s;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
-.back-btn:hover {
-    color: #fff5e0;
-    border-color: rgba(255, 245, 224, 0.6);
-    background: rgba(10, 10, 20, 0.85);
+
+.profile-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #ffd84a;
+    border: 2px solid #fff;
+    box-shadow: 0 0 15px currentColor;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    transition: background 0.3s;
+}
+
+/* Глаза внутри аватара */
+.profile-avatar::before, .profile-avatar::after {
+    content: '';
+    position: absolute;
+    width: 10px;
+    height: 14px;
+    background: #1a1a2e;
+    border-radius: 5px;
+    top: 15px;
+}
+.profile-avatar::before { left: 9px; }
+.profile-avatar::after { right: 9px; }
+
+.profile-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.profile-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.profile-nick {
+    font-family: 'Caveat', cursive;
+    font-size: 22px;
+    color: #d0e0ff;
+    text-shadow: 0 2px 5px rgba(0,0,0,0.8);
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.profile-level {
+    font-size: 11px;
+    font-weight: 700;
+    background: rgba(100, 255, 200, 0.2);
+    color: #88ffcc;
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid rgba(100, 255, 200, 0.4);
+}
+
+.profile-lives {
+    font-size: 14px;
+    letter-spacing: 2px;
+    margin-left: auto;
+}
+
+.profile-menu-btn {
+    background: transparent;
+    border: none;
+    color: #8a9ac8;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 0 4px;
+    transition: color 0.2s, transform 0.2s;
+}
+.profile-menu-btn:hover {
+    color: #fff;
+    transform: scale(1.1) rotate(45deg);
+}
+
+.profile-xp-bar {
+    width: 180px;
+    height: 8px;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+    border: 1px solid rgba(100, 150, 255, 0.2);
+}
+
+.profile-xp-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #ffd84a, #ffcc33);
+    transition: width 0.3s ease-out;
+    box-shadow: 0 0 10px rgba(255, 216, 74, 0.5);
+}
+
+.profile-xp-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 8px;
+    font-weight: 700;
+    color: #fff;
+    text-shadow: 0 1px 2px #000;
+    white-space: nowrap;
+    letter-spacing: 0.5px;
 }
 
 /* ═══════════════ HUD ═══════════════ */
@@ -104,7 +216,7 @@ canvas#c { display: block; width: 100%; height: 100%; }
 }
 .controls-hint b { color: #a8c8ff; }
 
-/* ═══════════════ ЧАТ ВНИЗУ (полностью прозрачный) ═══════════════ */
+/* ═══════════════ ЧАТ ═══════════════ */
 .chat {
     position: fixed;
     left: 0; right: 0; bottom: 0;
@@ -121,11 +233,8 @@ canvas#c { display: block; width: 100%; height: 100%; }
     pointer-events: none;
 }
 
-.chat > * {
-    pointer-events: auto;
-}
+.chat > * { pointer-events: auto; }
 
-/* Ручка для растягивания */
 .chat-resizer {
     position: absolute;
     top: 0; left: 50%; transform: translateX(-50%);
@@ -136,11 +245,8 @@ canvas#c { display: block; width: 100%; height: 100%; }
     z-index: 2;
     transition: background 0.2s;
 }
-.chat-resizer:hover {
-    background: rgba(200, 184, 168, 0.7);
-}
+.chat-resizer:hover { background: rgba(200, 184, 168, 0.7); }
 
-/* Шапка */
 .chat-header {
     display: flex;
     align-items: center;
@@ -159,9 +265,7 @@ canvas#c { display: block; width: 100%; height: 100%; }
     text-shadow: 0 2px 5px rgba(0,0,0,0.9);
 }
 
-.chat-actions {
-    display: flex; gap: 6px;
-}
+.chat-actions { display: flex; gap: 6px; }
 
 .chat-btn {
     background: transparent;
@@ -178,7 +282,6 @@ canvas#c { display: block; width: 100%; height: 100%; }
 }
 .chat-btn:hover { color: #fff5e0; }
 
-/* Сообщения */
 .chat-messages {
     flex: 1;
     overflow-y: auto;
@@ -189,6 +292,12 @@ canvas#c { display: block; width: 100%; height: 100%; }
     line-height: 1.5;
     min-height: 0;
     text-shadow: 0 1px 3px rgba(0,0,0,0.95), 0 0 8px rgba(0,0,0,0.7);
+    
+    /* ИСПРАВЛЕНИЕ ПЕРЕНОСА В ЧАТЕ */
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    white-space: pre-wrap;
 }
 
 .chat-messages::-webkit-scrollbar { width: 4px; }
@@ -200,7 +309,6 @@ canvas#c { display: block; width: 100%; height: 100%; }
 
 .chat-msg {
     margin-bottom: 2px;
-    word-wrap: break-word;
     animation: chatMsgIn 0.2s ease;
 }
 
@@ -210,14 +318,11 @@ canvas#c { display: block; width: 100%; height: 100%; }
 }
 
 .chat-author {
-    color: #88ffcc;
     font-weight: 600;
     text-shadow: 0 1px 3px rgba(0,0,0,0.95);
 }
 
-.chat-text {
-    color: #e8e0f0;
-}
+.chat-text { color: #e8e0f0; }
 
 .chat-time {
     color: #8a9ac8;
@@ -226,7 +331,6 @@ canvas#c { display: block; width: 100%; height: 100%; }
     text-shadow: 0 1px 3px rgba(0,0,0,0.95);
 }
 
-/* Ввод */
 .chat-input-wrap {
     display: flex;
     gap: 8px;
@@ -249,14 +353,8 @@ canvas#c { display: block; width: 100%; height: 100%; }
     text-shadow: 0 1px 3px rgba(0,0,0,0.95);
 }
 
-.chat-input:focus {
-    border-bottom-color: rgba(168, 200, 255, 0.9);
-}
-
-.chat-input::placeholder {
-    color: rgba(200, 184, 168, 0.5);
-    font-style: italic;
-}
+.chat-input:focus { border-bottom-color: rgba(168, 200, 255, 0.9); }
+.chat-input::placeholder { color: rgba(200, 184, 168, 0.5); font-style: italic; }
 
 .chat-send {
     padding: 6px 14px;
@@ -270,12 +368,8 @@ canvas#c { display: block; width: 100%; height: 100%; }
     transition: all 0.2s;
     text-shadow: 0 2px 5px rgba(0,0,0,0.9), 0 0 10px rgba(100, 255, 200, 0.4);
 }
-.chat-send:hover {
-    color: #fff;
-    text-shadow: 0 0 15px rgba(100, 255, 200, 0.8);
-}
+.chat-send:hover { color: #fff; text-shadow: 0 0 15px rgba(100, 255, 200, 0.8); }
 
-/* Настройки чата — тоже без плашки */
 .chat-settings {
     padding: 8px 4px 4px;
     background: transparent;
@@ -284,9 +378,7 @@ canvas#c { display: block; width: 100%; height: 100%; }
     gap: 6px;
     flex-shrink: 0;
 }
-.chat-settings.hidden {
-    display: none;
-}
+.chat-settings.hidden { display: none; }
 
 .chat-setting {
     display: flex;
@@ -301,18 +393,11 @@ canvas#c { display: block; width: 100%; height: 100%; }
 }
 .chat-setting:hover { color: #fff5e0; }
 
-/* Свёрнутый чат */
-.chat.collapsed {
-    height: 36px;
-}
+.chat.collapsed { height: 36px; }
 .chat.collapsed .chat-messages,
 .chat.collapsed .chat-input-wrap,
-.chat.collapsed .chat-settings {
-    display: none;
-}
-.chat.collapsed .chat-resizer {
-    display: none;
-}
+.chat.collapsed .chat-settings { display: none; }
+.chat.collapsed .chat-resizer { display: none; }
 
 /* ═══════════════ СВИТЧ ═══════════════ */
 .switch {
@@ -322,15 +407,9 @@ canvas#c { display: block; width: 100%; height: 100%; }
     flex-shrink: 0;
     z-index: 2;
 }
-.switch.small {
-    width: 44px; height: 24px;
-}
-.switch.small .slider::before {
-    width: 18px; height: 18px;
-}
-.switch.small input:checked + .slider::before {
-    transform: translateX(20px);
-}
+.switch.small { width: 44px; height: 24px; }
+.switch.small .slider::before { width: 18px; height: 18px; }
+.switch.small input:checked + .slider::before { transform: translateX(20px); }
 
 .switch input { opacity: 0; width: 0; height: 0; }
 .switch .slider {
@@ -368,10 +447,7 @@ canvas#c { display: block; width: 100%; height: 100%; }
     pointer-events: none;
     transition: opacity 0.4s ease;
 }
-.fullscreen.visible {
-    opacity: 1;
-    pointer-events: auto;
-}
+.fullscreen.visible { opacity: 1; pointer-events: auto; }
 
 .win-panel {
     display: flex;
@@ -454,8 +530,7 @@ canvas#c { display: block; width: 100%; height: 100%; }
     animation: fadeUp 0.7s cubic-bezier(0.34, 1.3, 0.64, 1) forwards;
 }
 
-.menu-btn:hover,
-.menu-btn:focus {
+.menu-btn:hover, .menu-btn:focus {
     color: #fff5e0;
     outline: none;
     transform: scale(1.05);
@@ -474,8 +549,7 @@ canvas#c { display: block; width: 100%; height: 100%; }
     background-size: 100% 100%;
     filter: drop-shadow(0 0 5px rgba(200, 184, 168, 0.5));
 }
-.menu-btn:hover::before,
-.menu-btn:focus::before {
+.menu-btn:hover::before, .menu-btn:focus::before {
     opacity: 1;
     transform: scale(1);
 }
@@ -492,13 +566,8 @@ canvas#c { display: block; width: 100%; height: 100%; }
     max-height: 400px;
     overflow: hidden;
 }
-.pause-settings.hidden {
-    max-height: 0;
-    margin-top: 0;
-    opacity: 0;
-}
+.pause-settings.hidden { max-height: 0; margin-top: 0; opacity: 0; }
 
-/* Ник персонажа */
 .pause-nick {
     display: flex;
     flex-direction: column;
@@ -530,10 +599,7 @@ canvas#c { display: block; width: 100%; height: 100%; }
     outline: none;
     transition: all 0.2s;
 }
-.pause-nick-input:focus {
-    border-bottom-color: rgba(168, 200, 255, 0.9);
-    color: #fff;
-}
+.pause-nick-input:focus { border-bottom-color: rgba(168, 200, 255, 0.9); color: #fff; }
 
 .pause-settings .setting-item {
     position: relative;
@@ -571,10 +637,7 @@ canvas#c { display: block; width: 100%; height: 100%; }
     transform: scale(1);
 }
 
-.pause-settings .setting-item .label {
-    position: relative;
-    z-index: 2;
-}
+.pause-settings .setting-item .label { position: relative; z-index: 2; }
 
 /* ═══════════════ АНИМАЦИИ ═══════════════ */
 @keyframes fadeUp {
@@ -586,13 +649,15 @@ canvas#c { display: block; width: 100%; height: 100%; }
 @media (max-width: 768px) {
     #hud { font-size: 12px; padding: 8px 12px; }
     #hud .hud-item { padding: 4px 8px; }
-    .controls-hint {
-        top: auto; bottom: 240px; right: 10px;
-        font-size: 12px; padding: 4px 10px;
-    }
+    .controls-hint { top: auto; bottom: 240px; right: 10px; font-size: 12px; padding: 4px 10px; }
     .chat { height: 180px; }
     .win-panel h1 { font-size: 28px; }
     .menu-btn { font-size: 22px; padding: 4px 30px; }
     .stats-block .stat-row { font-size: 18px; }
     .pause-settings .setting-item { font-size: 20px; padding: 6px 20px; }
+    
+    .player-profile { padding: 6px 10px; gap: 8px; }
+    .profile-avatar { width: 36px; height: 36px; }
+    .profile-nick { font-size: 18px; }
+    .profile-xp-bar { width: 120px; }
 }

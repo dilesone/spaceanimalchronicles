@@ -19,6 +19,9 @@
     const HTTP_URL = 'https://pdlemclcsgnw-production-uigv4qgi.us-central1.suga.run';
     
     let socket = null;
+    let isWheelOpen = false;
+    let holdTimer = null;
+    let qPressed = false;
     let myId = localStorage.getItem('kz_session_id') || null;
     let serverSeed = null;
 
@@ -132,6 +135,15 @@
                                 otherPlayers[id].chatBubbleTime = Date.now();
                                 break;
                             }
+                        }
+                    }
+                }
+                else if (data.type === 'emote') {
+                    // Показываем эмоцию у другого игрока
+                    for (const id in otherPlayers) {
+                        if (otherPlayers[id].nickname === data.nickname) {
+                            showEmote(otherPlayers[id], data.emoji);
+                            break;
                         }
                     }
                 }
@@ -286,6 +298,7 @@
     const profileXpFill = document.getElementById('profile-xp-fill');
     const profileXpText = document.getElementById('profile-xp-text');
     const profileMenuBtn = document.getElementById('profile-menu-btn');
+    const emoteWheel = document.getElementById('emoteWheel');
 
     // Чат
     const chatBox = document.getElementById('chat');
@@ -546,6 +559,12 @@
     if (chatSound) { chatSound.checked = chatOptions.sound; chatSound.addEventListener('change', () => { chatOptions.sound = chatSound.checked; saveChatOptions(); }); }
     if (chatSystem) { chatSystem.checked = chatOptions.showSystem; chatSystem.addEventListener('change', () => { chatOptions.showSystem = chatSystem.checked; saveChatOptions(); renderChat(); }); }
 
+    function showEmote(player, emoji) {
+        if (!player) return;
+        player.chatBubble = emoji;
+        player.chatBubbleTime = Date.now();
+    }
+    
     var chatHistory = [];
     function addChatMessage(author, text, isSystem = false, color = '#88ffcc') {
         const now = new Date();
@@ -575,7 +594,19 @@
     addChatMessage('Система', 'Добро пожаловать!', true);
 
     if (chatSend) chatSend.addEventListener('click', sendChat);
-    if (chatInput) chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); sendChat(); } });
+    if (chatInput) {
+        chatInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { 
+                e.preventDefault(); 
+                sendChat(); 
+                chatInput.blur(); // Убираем фокус после отправки
+            }
+            if (e.key === 'Escape') { 
+                chatInput.blur(); // Убираем фокус по Escape
+            }
+            e.stopPropagation();
+        });
+    }
 
     function sendChat() {
         if (!chatInput || !myPlayer) return;
@@ -809,6 +840,42 @@
 
     window.addEventListener('keydown', (e) => {
         if (e.target.tagName === 'INPUT') return;
+
+        // Открытие чата по T
+        if (e.key.toLowerCase() === 't') {
+            e.preventDefault();
+            if (chatInput) chatInput.focus();
+            return;
+        }
+
+        // Логика эмоций (Q)
+        if (e.key.toLowerCase() === 'q' && !qPressed) {
+            qPressed = true;
+            holdTimer = setTimeout(() => {
+                if (emoteWheel) {
+                    isWheelOpen = true;
+                    emoteWheel.classList.add('visible');
+                }
+            }, 200);
+        }
+
+        if (qPressed && ['1', '2', '3', '4'].includes(e.key)) {
+            clearTimeout(holdTimer);
+            if (emoteWheel) emoteWheel.classList.remove('visible');
+            isWheelOpen = false;
+            
+            const emojis = { '1': '❤️', '2': '😂', '3': '😢', '4': '😡' };
+            const emoji = emojis[e.key];
+            
+            if (emoji && myPlayer) {
+                showEmote(myPlayer, emoji);
+                if (socket && socket.readyState === WebSocket.OPEN) {
+                    socket.send(JSON.stringify({ type: 'emote', nickname: myPlayer.nickname, emoji: emoji }));
+                }
+            }
+            return;
+        }
+
         if (e.key === 'Escape') {
             e.preventDefault();
             if (window.__gameActive && !winScreen.classList.contains('visible')) {
@@ -817,9 +884,37 @@
         }
     });
 
+    window.addEventListener('keyup', (e) => {
+        if (e.target.tagName === 'INPUT') return;
+        if (e.key.toLowerCase() === 'q') {
+            qPressed = false;
+            clearTimeout(holdTimer);
+            if (isWheelOpen && emoteWheel) {
+                emoteWheel.classList.remove('visible');
+                isWheelOpen = false;
+            }
+        }
+    });
+
     window.addEventListener('beforeunload', () => {
         if (socket && socket.readyState === WebSocket.OPEN) socket.close();
     });
-
+    
+    // Клик по колесу эмоций (мышкой)
+    document.querySelectorAll('.emote-sector').forEach(sector => {
+        sector.addEventListener('click', (e) => {
+            const emoji = e.currentTarget.innerText.replace(/[1-4]/g, '').trim();
+            if (emoteWheel) emoteWheel.classList.remove('visible');
+            isWheelOpen = false;
+            
+            if (emoji && myPlayer) {
+                showEmote(myPlayer, emoji);
+                if (socket && socket.readyState === WebSocket.OPEN) {
+                    socket.send(JSON.stringify({ type: 'emote', nickname: myPlayer.nickname, emoji: emoji }));
+                }
+            }
+        });
+    });
+    
     start();
 })();

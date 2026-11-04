@@ -475,10 +475,10 @@
     if (chatSystem) { chatSystem.checked = chatOptions.showSystem; chatSystem.addEventListener('change', () => { chatOptions.showSystem = chatSystem.checked; saveChatOptions(); renderChat(); }); }
 
     var chatHistory = [];
-    function addChatMessage(author, text, isSystem = false) {
+    function addChatMessage(author, text, isSystem = false, color = '#88ffcc') {
         const now = new Date();
         const time = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-        chatHistory.push({ author, text, time, isSystem });
+        chatHistory.push({ author, text, time, isSystem, color });
         renderChat();
         if (!isSystem && chatOptions.sound && window.Audio) Audio.play(660, 0.08, 'sine', 0.04);
     }
@@ -509,9 +509,14 @@
         const text = (chatInput.value || '').trim();
         if (!text) return;
         if (socket && socket.readyState === WebSocket.OPEN) {
-            socket.send(JSON.stringify({ type: 'chat', author: myPlayer.nickname || 'Игрок', text: text }));
+            socket.send(JSON.stringify({ 
+                type: 'chat', 
+                author: myPlayer.nickname || 'Игрок', 
+                text: text,
+                color: myPlayer.nickColor || '#88ffcc' // <--- ЦВЕТ НИКА
+            }));
         }
-        addChatMessage(myPlayer.nickname || 'Игрок', text);
+        addChatMessage(myPlayer.nickname || 'Игрок', text, false, myPlayer.nickColor);
         chatInput.value = '';
     }
 

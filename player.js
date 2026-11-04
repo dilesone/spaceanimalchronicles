@@ -424,32 +424,76 @@
                 ctx.textBaseline = 'top';
 
                 const maxBubbleWidth = 160;
-                const words = this.chatBubble.split(' ');
-                const lines = [];
-                let currentLine = '';
                 const maxLines = 4;
-
-                for (let i = 0; i < words.length; i++) {
-                    if (lines.length >= maxLines) break;
-                    const testLine = currentLine + words[i] + ' ';
-                    const metrics = ctx.measureText(testLine);
-                    if (metrics.width > maxBubbleWidth && currentLine !== '') {
-                        lines.push(currentLine.trim());
-                        currentLine = words[i] + ' ';
-                    } else {
-                        currentLine = testLine;
-                    }
-                }
-                if (lines.length < maxLines && currentLine.trim() !== '') {
-                    lines.push(currentLine.trim());
-                }
-
                 const lineHeight = 18;
                 const padX = 12;
                 const padY = 8;
+
+                // Функция для переноса текста с обрезкой длинных слов
+                function wrapText(text, maxWidth) {
+                    const words = text.split(' ');
+                    const lines = [];
+                    let currentLine = '';
+
+                    for (let i = 0; i < words.length; i++) {
+                        let word = words[i];
+                        
+                        // Если слово само по себе шире пузыря, режем его на куски
+                        while (ctx.measureText(word).width > maxWidth) {
+                            let charCount = 1;
+                            while (ctx.measureText(word.substring(0, charCount + 1)).width <= maxWidth) {
+                                charCount++;
+                            }
+                            // Если есть место в текущей строке, добавляем кусок
+                            if (currentLine !== '') {
+                                lines.push(currentLine.trim());
+                                currentLine = '';
+                            }
+                            lines.push(word.substring(0, charCount));
+                            word = word.substring(charCount);
+                            
+                            // Если строк уже слишком много, прерываемся
+                            if (lines.length >= maxLines) return lines;
+                        }
+
+                        const testLine = currentLine + word + ' ';
+                        if (ctx.measureText(testLine).width > maxWidth && currentLine !== '') {
+                            lines.push(currentLine.trim());
+                            currentLine = word + ' ';
+                        } else {
+                            currentLine = testLine;
+                        }
+                        
+                        if (lines.length >= maxLines) return lines;
+                    }
+                    
+                    if (currentLine.trim() !== '' && lines.length < maxLines) {
+                        lines.push(currentLine.trim());
+                    }
+                    return lines;
+                }
+
+                let lines = wrapText(this.chatBubble, maxBubbleWidth);
+                
+                // Если текст не влез в 4 строки, обрезаем последнюю и ставим ...
+                let isTruncated = false;
+                if (lines.length > maxLines) {
+                    lines = lines.slice(0, maxLines);
+                    isTruncated = true;
+                } else if (this.chatBubble.length > lines.join(' ').length) {
+                    isTruncated = true;
+                }
+
+                if (isTruncated) {
+                    let lastLine = lines[maxLines - 1];
+                    while (ctx.measureText(lastLine + '...').width > maxBubbleWidth && lastLine.length > 0) {
+                        lastLine = lastLine.slice(0, -1);
+                    }
+                    lines[maxLines - 1] = lastLine + '...';
+                }
+
                 const bubbleW = maxBubbleWidth + padX * 2;
                 const bubbleH = lines.length * lineHeight + padY * 2;
-                
                 const bubbleY = py - (this.hasNut ? 60 : 50) - bubbleH;
 
                 ctx.fillStyle = 'rgba(30, 30, 50, 0.95)';

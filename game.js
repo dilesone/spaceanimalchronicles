@@ -915,7 +915,10 @@
     document.querySelectorAll('.emote-sector').forEach(sector => {
         sector.addEventListener('click', (e) => {
             const emoji = e.currentTarget.innerText.replace(/[1-4]/g, '').trim();
-            if (emoteWheel) emoteWheel.classList.remove('visible');
+            
+            if (emoteWheel) {
+                emoteWheel.classList.remove('visible'); // Убираем класс -> display: none
+            }
             isWheelOpen = false;
             
             if (emoji && myPlayer) {

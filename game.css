@@ -641,6 +641,7 @@ canvas#c { display: block; width: 100%; height: 100%; }
 /* ═══════════════ ЭМОЦИИ ═══════════════ */
 .emote-wheel {
     position: fixed; inset: 0;
+    display: none; /* <--- ЖЕСТКО СКРЫТ */
     pointer-events: none; 
     opacity: 0;
     transition: opacity 0.15s ease;
@@ -648,8 +649,9 @@ canvas#c { display: block; width: 100%; height: 100%; }
     background: transparent;
 }
 .emote-wheel.visible {
-    opacity: 1; 
-    pointer-events: auto;
+    display: block; /* <--- ПОКАЗЫВАЕМ ТОЛЬКО КОГДА НУЖНО */
+    opacity: 1;
+    pointer-events: auto; 
 }
 .wheel-container {
     position: fixed;

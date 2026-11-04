@@ -299,6 +299,7 @@
     const profileXpText = document.getElementById('profile-xp-text');
     const profileMenuBtn = document.getElementById('profile-menu-btn');
     const emoteWheel = document.getElementById('emoteWheel');
+    const wheelContainer = document.getElementById('wheelContainer');
 
     // Чат
     const chatBox = document.getElementById('chat');
@@ -852,7 +853,17 @@
         if (e.key.toLowerCase() === 'q' && !qPressed) {
             qPressed = true;
             holdTimer = setTimeout(() => {
-                if (emoteWheel) {
+                if (emoteWheel && wheelContainer) {
+                    // Вычисляем экранные координаты игрока
+                    if (myPlayer) {
+                        const screenX = myPlayer.x - camX + PlayerClass.PHYS.W / 2;
+                        const screenY = myPlayer.y - camY + PlayerClass.PHYS.H / 2;
+                        
+                        // Ставим контейнер колеса ровно на эти координаты
+                        wheelContainer.style.left = `${screenX}px`;
+                        wheelContainer.style.top = `${screenY}px`;
+                    }
+                    
                     isWheelOpen = true;
                     emoteWheel.classList.add('visible');
                 }

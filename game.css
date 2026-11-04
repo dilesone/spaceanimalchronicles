@@ -641,21 +641,27 @@ canvas#c { display: block; width: 100%; height: 100%; }
 /* ═══════════════ ЭМОЦИИ ═══════════════ */
 .emote-wheel {
     position: fixed; inset: 0;
-    display: flex; justify-content: center; align-items: center;
     pointer-events: none; opacity: 0;
     transition: opacity 0.15s ease;
     z-index: 1000;
     background: rgba(0, 0, 0, 0.2);
+    /* Убираем flex-центрирование, так как будем позиционировать абсолютно */
 }
 .emote-wheel.visible {
     opacity: 1; pointer-events: auto;
 }
+
+/* Контейнер теперь абсолютно позиционируется скриптом */
 .wheel-container {
-    position: relative;
+    position: absolute;
     width: 140px;
     height: 140px;
+    transform: translate(-50%, -50%); /* Центрируем относительно заданных координат */
     display: flex; justify-content: center; align-items: center;
+    pointer-events: none;
 }
+/* Восстанавливаем кликабельность для самих секторов */
+.wheel-container > * { pointer-events: auto; }
 .emote-sector {
     position: absolute;
     width: 45px;

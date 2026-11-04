@@ -416,19 +416,18 @@
                 ctx.restore();
             }
 
-            // ─── ПУЗЫРЬ С СООБЩЕНИЕМ (Белое облако) ──────────────────────
+            // ─── ПУЗЫРЬ С СООБЩЕНИЕМ (Форма мысли) ──────────────────────
             if (this.chatBubble && Date.now() - this.chatBubbleTime < 5000) {
                 ctx.save();
                 
-                // Шрифт чуть мельче (12px вместо 14px)
                 ctx.font = '12px "Montserrat", sans-serif';
                 ctx.textAlign = 'center';
-                ctx.textBaseline = 'top';
+                ctx.textBaseline = 'middle'; // Центрируем текст по вертикали
 
                 const maxWidth = 160; 
-                const lineHeight = 16; // Уменьшили высоту строки
-                const padX = 12;
-                const padY = 8;
+                const lineHeight = 16; 
+                const padX = 16; // Чуть больше отступы по бокам
+                const padY = 10;
                 const maxLines = 4;
 
                 // 1. Разбиваем текст
@@ -464,47 +463,51 @@
                     lines[maxLines - 1] = last + '...';
                 }
 
-                // 2. Рисуем облако
+                // 2. Рассчитываем размеры
                 const bubbleW = maxWidth + padX * 2;
                 const bubbleH = lines.length * lineHeight + padY * 2;
-                const bubbleY = py - (this.hasNut ? 60 : 50) - bubbleH;
+                // Поднимаем пузырь повыше, чтобы хвостик влез
+                const bubbleY = py - (this.hasNut ? 75 : 65) - bubbleH;
+                const bubbleX = cx - bubbleW / 2;
 
-                // Полупрозрачный белый фон
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.85)'; 
-                ctx.strokeStyle = 'rgba(200, 200, 200, 0.5)'; // Легкая серая обводка
-                ctx.lineWidth = 1;
+                // 3. Рисуем фон (Белое, почти непрозрачное облако)
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.95)'; 
+                ctx.strokeStyle = 'rgba(200, 200, 200, 0.8)'; 
+                ctx.lineWidth = 1.5;
                 
-                // Рисуем скругленный прямоугольник (основа облака)
+                // Основная плашка
                 ctx.beginPath();
                 if (ctx.roundRect) {
-                    ctx.roundRect(cx - bubbleW / 2, bubbleY, bubbleW, bubbleH, 16); // Радиус побольше для "облачности"
+                    ctx.roundRect(bubbleX, bubbleY, bubbleW, bubbleH, 12);
                 } else {
-                    ctx.rect(cx - bubbleW / 2, bubbleY, bubbleW, bubbleH);
+                    ctx.rect(bubbleX, bubbleY, bubbleW, bubbleH);
                 }
                 ctx.fill();
                 ctx.stroke();
 
-                // Дорисовываем "пузыри" по краям, чтобы было похоже на облако
+                // 4. Рисуем "капельки" (хвостик мысли)
+                // Первая капелька (побольше)
+                const c1x = cx - 15;
+                const c1y = bubbleY + bubbleH + 6;
                 ctx.beginPath();
-                ctx.arc(cx - bubbleW / 4, bubbleY + 4, 6, 0, Math.PI * 2);
-                ctx.arc(cx + bubbleW / 4, bubbleY + 4, 6, 0, Math.PI * 2);
-                ctx.arc(cx - bubbleW / 2 + 4, bubbleY + bubbleH / 2, 6, 0, Math.PI * 2);
-                ctx.arc(cx + bubbleW / 2 - 4, bubbleY + bubbleH / 2, 6, 0, Math.PI * 2);
+                ctx.arc(c1x, c1y, 5, 0, Math.PI * 2);
                 ctx.fill();
+                ctx.stroke();
 
-                // Хвостик (тоже белый, полупрозрачный)
+                // Вторая капелька (поменьше, ниже и левее)
+                const c2x = cx - 25;
+                const c2y = bubbleY + bubbleH + 15;
                 ctx.beginPath();
-                ctx.moveTo(cx - 5, bubbleY + bubbleH);
-                ctx.lineTo(cx, bubbleY + bubbleH + 6);
-                ctx.lineTo(cx + 5, bubbleY + bubbleH);
-                ctx.closePath();
+                ctx.arc(c2x, c2y, 2.5, 0, Math.PI * 2);
                 ctx.fill();
+                ctx.stroke();
 
-                // 3. Текст (темно-серый для контраста на белом)
-                ctx.fillStyle = '#333333';
-                ctx.shadowColor = 'transparent'; // Убираем тень у текста
+                // 5. Текст
+                ctx.fillStyle = '#222222'; // Темно-серый текст
                 for (let i = 0; i < lines.length; i++) {
-                    ctx.fillText(lines[i], cx, bubbleY + padY + i * lineHeight);
+                    // Сдвигаем текст так, чтобы он был по центру пузыря
+                    const textY = bubbleY + padY + (i * lineHeight) + (lineHeight / 2);
+                    ctx.fillText(lines[i], cx, textY);
                 }
 
                 ctx.restore();

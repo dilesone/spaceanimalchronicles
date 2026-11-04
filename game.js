@@ -26,6 +26,8 @@
     let serverSeed = null;
 
 
+    let roundTime = 300; // 5 минут
+    let roundTimerInterval = null;
     let playerXP = parseInt(localStorage.getItem('kz_xp')) || 0;
     let playerLevel = parseInt(localStorage.getItem('kz_level')) || 1;
     let xpForNextLevel = playerLevel * 100;

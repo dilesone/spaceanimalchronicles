@@ -338,26 +338,34 @@
     window.addEventListener('resize', resize);
     resize();
 
-    function updateHUD() {
+        function updateHUD() {
         const s = Level.state.collected;
         const p = Level.state.personal || { berries: 0, crystals: 0, nuts: 0 };
 
-        if (hudBerries) hudBerries.textContent = `${s.berries} / ${Level.state.totalBerries}`;
-        if (hudCrystals) hudCrystals.textContent = `${s.crystals} / ${Level.state.totalCrystals}`;
-        if (hudNuts) hudNuts.textContent = `${s.nuts} / ${Level.state.totalNuts}`;
-        if (hudLives && myPlayer) hudLives.textContent = '❤️'.repeat(Math.max(0, myPlayer.lives));
-
-        if (hudPersonal) {
-            hudPersonal.textContent = `${p.berries + p.crystals + p.nuts}`;
+        // Ресурсы (формат собрано/всего)
+        if (hudBerries) hudBerries.textContent = `${s.berries}/${Level.state.totalBerries}`;
+        if (hudCrystals) hudCrystals.textContent = `${s.crystals}/${Level.state.totalCrystals}`;
+        if (hudNuts) hudNuts.textContent = `${s.nuts}/${Level.state.totalNuts}`;
+        
+        // Подсветка ореха (зеленым), если он собран
+        if (nutResItem) {
+            if (s.nuts >= Level.state.totalNuts) nutResItem.classList.add('complete');
+            else nutResItem.classList.remove('complete');
         }
 
+        // Эвакуация (заполняем полоску)
         const totalNeeded = Level.state.totalBerries + Level.state.totalCrystals;
         const totalCollected = s.berries + s.crystals;
-        portalOpen = totalCollected >= totalNeeded / 2;
-
-        if (hudPortal) {
-            hudPortal.textContent = portalOpen ? 'ОТКРЫТ' : 'ЗАКРЫТ';
-            hudPortal.style.color = portalOpen ? '#00e676' : '#ff7088';
+        const percent = totalNeeded > 0 ? Math.min(100, (totalCollected / totalNeeded) * 100) : 100;
+        
+        if (portalFill) portalFill.style.width = `${percent}%`;
+        
+        if (percent >= 100) {
+            if (portalBlock) portalBlock.classList.add('open');
+            portalOpen = true;
+        } else {
+            if (portalBlock) portalBlock.classList.remove('open');
+            portalOpen = false;
         }
     }
 

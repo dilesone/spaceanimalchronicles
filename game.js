@@ -115,8 +115,8 @@
                     onlineElement.textContent = `Онлайн: ${data.count}`;
                 }
                 else if (data.type === 'chat') {
-                    addChatMessage(data.author, data.text);
-                } 
+                    addChatMessage(data.author, data.text, false, data.color);
+                }
                 else if (data.type === 'move') {
                     if (data.id !== myId) {
                         if (!otherPlayers[data.id]) {

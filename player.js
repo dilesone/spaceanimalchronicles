@@ -59,6 +59,7 @@
             this.targetY = 600;
             
             this.keys = { left: false, right: false, jump: false, dash: false };
+            
             this.chatBubble = null;
             this.chatBubbleTime = 0;
         }
@@ -415,54 +416,73 @@
                 ctx.restore();
             }
 
-                        // ─── ПУЗЫРЬ С СООБЩЕНИЕМ ──────────────────────
+            // ─── ПУЗЫРЬ С СООБЩЕНИЕМ (максимум 4 строки) ──────────────────────
             if (this.chatBubble && Date.now() - this.chatBubbleTime < 5000) {
-                const bubbleY = py - (this.hasNut ? 70 : 55);
-                
                 ctx.save();
                 ctx.font = '14px "Montserrat", sans-serif';
                 ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
+                ctx.textBaseline = 'top';
 
-                const metrics = ctx.measureText(this.chatBubble);
-                const textW = metrics.width;
-                const padX = 10;
-                const padY = 6;
-                const bubbleW = textW + padX * 2;
-                const bubbleH = 24;
+                const maxBubbleWidth = 160;
+                const words = this.chatBubble.split(' ');
+                const lines = [];
+                let currentLine = '';
+                const maxLines = 4;
+
+                for (let i = 0; i < words.length; i++) {
+                    if (lines.length >= maxLines) break;
+                    const testLine = currentLine + words[i] + ' ';
+                    const metrics = ctx.measureText(testLine);
+                    if (metrics.width > maxBubbleWidth && currentLine !== '') {
+                        lines.push(currentLine.trim());
+                        currentLine = words[i] + ' ';
+                    } else {
+                        currentLine = testLine;
+                    }
+                }
+                if (lines.length < maxLines && currentLine.trim() !== '') {
+                    lines.push(currentLine.trim());
+                }
+
+                const lineHeight = 18;
+                const padX = 12;
+                const padY = 8;
+                const bubbleW = maxBubbleWidth + padX * 2;
+                const bubbleH = lines.length * lineHeight + padY * 2;
                 
-                // Фон пузыря
+                const bubbleY = py - (this.hasNut ? 60 : 50) - bubbleH;
+
                 ctx.fillStyle = 'rgba(30, 30, 50, 0.95)';
                 ctx.strokeStyle = this.nickColor || '#88ffcc';
                 ctx.lineWidth = 2;
                 
                 ctx.beginPath();
                 if (ctx.roundRect) {
-                    ctx.roundRect(cx - bubbleW / 2, bubbleY - bubbleH, bubbleW, bubbleH, 8);
+                    ctx.roundRect(cx - bubbleW / 2, bubbleY, bubbleW, bubbleH, 8);
                 } else {
-                    ctx.rect(cx - bubbleW / 2, bubbleY - bubbleH, bubbleW, bubbleH);
+                    ctx.rect(cx - bubbleW / 2, bubbleY, bubbleW, bubbleH);
                 }
                 ctx.fill();
                 ctx.stroke();
                 
-                // Хвостик
                 ctx.beginPath();
-                ctx.moveTo(cx - 6, bubbleY);
-                ctx.lineTo(cx, bubbleY + 8);
-                ctx.lineTo(cx + 6, bubbleY);
+                ctx.moveTo(cx - 6, bubbleY + bubbleH);
+                ctx.lineTo(cx, bubbleY + bubbleH + 8);
+                ctx.lineTo(cx + 6, bubbleY + bubbleH);
                 ctx.closePath();
                 ctx.fillStyle = 'rgba(30, 30, 50, 0.95)';
                 ctx.fill();
                 
-                // Текст
                 ctx.fillStyle = '#ffffff';
-                ctx.fillText(this.chatBubble, cx, bubbleY - bubbleH / 2);
+                for (let i = 0; i < lines.length; i++) {
+                    ctx.fillText(lines[i], cx, bubbleY + padY + i * lineHeight);
+                }
+
                 ctx.restore();
             }
         }
     }
 
-    // ═══ ДОБАВЛЯЕМ PHYS В КЛАСС, ЧТОБЫ PlayerClass.PHYS.W РАБОТАЛ ═══
     Player.PHYS = PHYS;
     
     window.PlayerClass = Player;

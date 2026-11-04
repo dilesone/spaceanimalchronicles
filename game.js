@@ -263,19 +263,24 @@
             terrain: 'ground'
         });
     }
-        // ─── DOM ──────────────────────────────────────────────
+    // ─── DOM ──────────────────────────────────────────────
     const canvas = document.getElementById('c');
     const ctx = canvas.getContext('2d');
+    
+    // Новый HUD
+    const hudTimer = document.getElementById('hud-timer');
+    const portalBlock = document.getElementById('portal-block');
+    const portalFill = document.getElementById('portal-fill');
     const hudBerries = document.getElementById('hud-berries');
     const hudCrystals = document.getElementById('hud-crystals');
     const hudNuts = document.getElementById('hud-nuts');
-    const hudLives = document.getElementById('hud-lives');
-    const hudPortal = document.getElementById('hud-portal');
-    const hudPersonal = document.getElementById('hud-personal');
+    const nutResItem = document.getElementById('nut-res-item');
+    
     const winScreen = document.getElementById('win-screen');
     const winStats = document.getElementById('win-stats');
     const pauseScreen = document.getElementById('pause-screen');
     const pauseSettings = document.getElementById('pause-settings');
+    
     const btnNext = document.getElementById('btn-next');
     const btnRestart = document.getElementById('btn-restart');
     const btnToMap = document.getElementById('btn-to-map');
@@ -283,21 +288,24 @@
     const btnPauseRestart = document.getElementById('btn-pause-restart');
     const btnPauseSettings = document.getElementById('btn-pause-settings');
     const btnPauseMenu = document.getElementById('btn-pause-menu');
+    
     const settingCenter = document.getElementById('setting-center');
     const settingFollow = document.getElementById('setting-follow');
     const pauseNickname = document.getElementById('pause-nickname');
-    const pauseColor = document.getElementById('pause-color');
-    const pauseNickColor = document.getElementById('pause-nick-color');
+    
     const btnWait = document.getElementById('btn-wait');
     const btnLeaveAlone = document.getElementById('btn-leave-alone');
     const btnSoloNext = document.getElementById('btn-solo-next');
+    
+    // Профиль
     const profileNick = document.getElementById('profile-nick');
     const profileLevel = document.getElementById('profile-level');
     const profileLives = document.getElementById('profile-lives');
     const profileAvatar = document.getElementById('profile-avatar');
     const profileXpFill = document.getElementById('profile-xp-fill');
-    const profileXpText = document.getElementById('profile-xp-text');
     const profileMenuBtn = document.getElementById('profile-menu-btn');
+    
+    // Эмоции
     const emoteWheel = document.getElementById('emoteWheel');
     const wheelContainer = document.getElementById('wheelContainer');
 
@@ -314,7 +322,6 @@
     const chatSound = document.getElementById('chat-sound');
     const chatSystem = document.getElementById('chat-system');
     const chatClear = document.getElementById('chat-clear');
-
     let viewW = window.innerWidth;
     let viewH = window.innerHeight;
     let camX = 0, camY = 0;

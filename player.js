@@ -416,108 +416,93 @@
                 ctx.restore();
             }
 
-            // ─── ПУЗЫРЬ С СООБЩЕНИЕМ (максимум 4 строки) ──────────────────────
+            // ─── ПУЗЫРЬ С СООБЩЕНИЕМ (Белое облако) ──────────────────────
             if (this.chatBubble && Date.now() - this.chatBubbleTime < 5000) {
                 ctx.save();
-                ctx.font = '14px "Montserrat", sans-serif';
+                
+                // Шрифт чуть мельче (12px вместо 14px)
+                ctx.font = '12px "Montserrat", sans-serif';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'top';
 
-                const maxBubbleWidth = 160;
-                const maxLines = 4;
-                const lineHeight = 18;
+                const maxWidth = 160; 
+                const lineHeight = 16; // Уменьшили высоту строки
                 const padX = 12;
                 const padY = 8;
+                const maxLines = 4;
 
-                // Функция для переноса текста с обрезкой длинных слов
-                function wrapText(text, maxWidth) {
-                    const words = text.split(' ');
-                    const lines = [];
-                    let currentLine = '';
+                // 1. Разбиваем текст
+                const words = this.chatBubble.split(' ');
+                let lines = [];
+                let currentLine = '';
 
-                    for (let i = 0; i < words.length; i++) {
-                        let word = words[i];
-                        
-                        // Если слово само по себе шире пузыря, режем его на куски
-                        while (ctx.measureText(word).width > maxWidth) {
-                            let charCount = 1;
-                            while (ctx.measureText(word.substring(0, charCount + 1)).width <= maxWidth) {
-                                charCount++;
-                            }
-                            // Если есть место в текущей строке, добавляем кусок
-                            if (currentLine !== '') {
-                                lines.push(currentLine.trim());
-                                currentLine = '';
-                            }
-                            lines.push(word.substring(0, charCount));
-                            word = word.substring(charCount);
-                            
-                            // Если строк уже слишком много, прерываемся
-                            if (lines.length >= maxLines) return lines;
-                        }
-
-                        const testLine = currentLine + word + ' ';
-                        if (ctx.measureText(testLine).width > maxWidth && currentLine !== '') {
-                            lines.push(currentLine.trim());
-                            currentLine = word + ' ';
-                        } else {
-                            currentLine = testLine;
-                        }
-                        
-                        if (lines.length >= maxLines) return lines;
+                for (let i = 0; i < words.length; i++) {
+                    let word = words[i];
+                    while (ctx.measureText(word).width > maxWidth) {
+                        let charCount = 1;
+                        while (ctx.measureText(word.substring(0, charCount + 1)).width <= maxWidth) charCount++;
+                        if (currentLine !== '') { lines.push(currentLine.trim()); currentLine = ''; }
+                        lines.push(word.substring(0, charCount));
+                        word = word.substring(charCount);
+                        if (lines.length >= maxLines) break;
                     }
-                    
-                    if (currentLine.trim() !== '' && lines.length < maxLines) {
+                    if (lines.length >= maxLines) break;
+
+                    const testLine = currentLine + word + ' ';
+                    if (ctx.measureText(testLine).width > maxWidth && currentLine !== '') {
                         lines.push(currentLine.trim());
+                        currentLine = word + ' ';
+                    } else {
+                        currentLine = testLine;
                     }
-                    return lines;
                 }
-
-                let lines = wrapText(this.chatBubble, maxBubbleWidth);
-                
-                // Если текст не влез в 4 строки, обрезаем последнюю и ставим ...
-                let isTruncated = false;
+                if (currentLine.trim() !== '' && lines.length < maxLines) lines.push(currentLine.trim());
                 if (lines.length > maxLines) {
                     lines = lines.slice(0, maxLines);
-                    isTruncated = true;
-                } else if (this.chatBubble.length > lines.join(' ').length) {
-                    isTruncated = true;
+                    let last = lines[maxLines - 1];
+                    while (ctx.measureText(last + '...').width > maxWidth && last.length > 0) last = last.slice(0, -1);
+                    lines[maxLines - 1] = last + '...';
                 }
 
-                if (isTruncated) {
-                    let lastLine = lines[maxLines - 1];
-                    while (ctx.measureText(lastLine + '...').width > maxBubbleWidth && lastLine.length > 0) {
-                        lastLine = lastLine.slice(0, -1);
-                    }
-                    lines[maxLines - 1] = lastLine + '...';
-                }
-
-                const bubbleW = maxBubbleWidth + padX * 2;
+                // 2. Рисуем облако
+                const bubbleW = maxWidth + padX * 2;
                 const bubbleH = lines.length * lineHeight + padY * 2;
                 const bubbleY = py - (this.hasNut ? 60 : 50) - bubbleH;
 
-                ctx.fillStyle = 'rgba(30, 30, 50, 0.95)';
-                ctx.strokeStyle = this.nickColor || '#88ffcc';
-                ctx.lineWidth = 2;
+                // Полупрозрачный белый фон
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.85)'; 
+                ctx.strokeStyle = 'rgba(200, 200, 200, 0.5)'; // Легкая серая обводка
+                ctx.lineWidth = 1;
                 
+                // Рисуем скругленный прямоугольник (основа облака)
                 ctx.beginPath();
                 if (ctx.roundRect) {
-                    ctx.roundRect(cx - bubbleW / 2, bubbleY, bubbleW, bubbleH, 8);
+                    ctx.roundRect(cx - bubbleW / 2, bubbleY, bubbleW, bubbleH, 16); // Радиус побольше для "облачности"
                 } else {
                     ctx.rect(cx - bubbleW / 2, bubbleY, bubbleW, bubbleH);
                 }
                 ctx.fill();
                 ctx.stroke();
-                
+
+                // Дорисовываем "пузыри" по краям, чтобы было похоже на облако
                 ctx.beginPath();
-                ctx.moveTo(cx - 6, bubbleY + bubbleH);
-                ctx.lineTo(cx, bubbleY + bubbleH + 8);
-                ctx.lineTo(cx + 6, bubbleY + bubbleH);
-                ctx.closePath();
-                ctx.fillStyle = 'rgba(30, 30, 50, 0.95)';
+                ctx.arc(cx - bubbleW / 4, bubbleY + 4, 6, 0, Math.PI * 2);
+                ctx.arc(cx + bubbleW / 4, bubbleY + 4, 6, 0, Math.PI * 2);
+                ctx.arc(cx - bubbleW / 2 + 4, bubbleY + bubbleH / 2, 6, 0, Math.PI * 2);
+                ctx.arc(cx + bubbleW / 2 - 4, bubbleY + bubbleH / 2, 6, 0, Math.PI * 2);
                 ctx.fill();
-                
-                ctx.fillStyle = '#ffffff';
+
+                // Хвостик (тоже белый, полупрозрачный)
+                ctx.beginPath();
+                ctx.moveTo(cx - 5, bubbleY + bubbleH);
+                ctx.lineTo(cx, bubbleY + bubbleH + 6);
+                ctx.lineTo(cx + 5, bubbleY + bubbleH);
+                ctx.closePath();
+                ctx.fill();
+
+                // 3. Текст (темно-серый для контраста на белом)
+                ctx.fillStyle = '#333333';
+                ctx.shadowColor = 'transparent'; // Убираем тень у текста
                 for (let i = 0; i < lines.length; i++) {
                     ctx.fillText(lines[i], cx, bubbleY + padY + i * lineHeight);
                 }

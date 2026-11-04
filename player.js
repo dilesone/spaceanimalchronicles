@@ -461,8 +461,6 @@
             }
         }
     }
-        }
-    }
 
     // ═══ ДОБАВЛЯЕМ PHYS В КЛАСС, ЧТОБЫ PlayerClass.PHYS.W РАБОТАЛ ═══
     Player.PHYS = PHYS;

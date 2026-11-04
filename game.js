@@ -490,8 +490,9 @@
             if (msg.isSystem && !chatOptions.showSystem) continue;
             const el = document.createElement('div');
             el.className = 'chat-msg';
+            const authorColor = msg.isSystem ? '#88ffcc' : (msg.color || '#88ffcc');
             el.innerHTML = (chatOptions.showTime ? `<span class="chat-time">${msg.time}</span>` : '') + 
-                           `<span class="chat-author">${escapeHtml(msg.author)}:</span> ` + 
+                           `<span class="chat-author" style="color: ${authorColor};">${escapeHtml(msg.author)}:</span> ` + 
                            `<span class="chat-text">${escapeHtml(msg.text)}</span>`;
             chatMessages.appendChild(el);
         }

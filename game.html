@@ -7,7 +7,7 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Montserrat:wght@300;600&family=Rubik+One&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Montserrat:wght@300;600;700;800&family=Rubik+One&display=swap" rel="stylesheet">
 
 <link rel="stylesheet" href="game.css">
 </head>
@@ -15,50 +15,52 @@
 
 <canvas id="c"></canvas>
 
-<!-- КАРТОЧКА ПИЛОТА -->
-<div id="player-profile" class="player-profile">
-    <div class="profile-avatar" id="profile-avatar">
-        <!-- Сюда JS вставит цветной квадратик, глаза через CSS -->
-    </div>
-    <div class="profile-info">
-        <div class="profile-top">
-            <span class="profile-nick" id="profile-nick">Игрок</span>
-            <span class="profile-level" id="profile-level">Lvl 1</span>
-            <div class="profile-lives" id="profile-lives">❤️❤️❤️</div>
-            <button class="profile-menu-btn" id="profile-menu-btn" title="Пауза / Меню">⚙</button>
-        </div>
-        <div class="profile-xp-bar">
-            <div class="profile-xp-fill" id="profile-xp-fill"></div>
-            <span class="profile-xp-text" id="profile-xp-text">0 / 100 XP</span>
+<!-- ВЕРХНИЙ HUD -->
+<div class="hud-top">
+    
+    <!-- Левая часть: Профиль -->
+    <div class="hud-element profile-card">
+        <div class="avatar" id="profile-avatar"></div>
+        <div class="profile-info">
+            <div class="profile-name" id="profile-nick">Игрок</div>
+            <div class="profile-stats">
+                <span id="profile-level">Lvl 1</span>
+                <span id="profile-lives">❤️❤️❤️</span>
+            </div>
+            <div class="profile-xp"><div class="profile-xp-fill" id="profile-xp-fill"></div></div>
         </div>
     </div>
-</div>
 
-<!-- HUD (Ресурсы и Портал) -->
-<div id="hud">
-    <div class="hud-item lives" style="display: none;"> <!-- Скрыли, так как жизни теперь в профиле -->
-        <span class="icon">❤️</span>
-        <span class="value" id="hud-lives">❤️❤️❤️</span>
+    <!-- Центр: Таймер + Эвакуация -->
+    <div class="center-group">
+        <div class="hud-element timer-box" id="hud-timer">05:00</div>
+        
+        <div class="hud-element portal-block" id="portal-block">
+            <div class="portal-icon">🌀</div>
+            <div class="portal-data">
+                <div class="portal-title">Эвакуация</div>
+                <div class="portal-bar-bg">
+                    <div class="portal-bar-fill" id="portal-fill"></div>
+                </div>
+            </div>
+        </div>
     </div>
-    <div class="hud-item">
-        <span class="icon">🍓</span>
-        <span class="value" id="hud-berries">0 / 0</span>
-    </div>
-    <div class="hud-item">
-        <span class="icon">💎</span>
-        <span class="value" id="hud-crystals">0 / 0</span>
-    </div>
-    <div class="hud-item">
-        <span class="icon">🌰</span>
-        <span class="value" id="hud-nuts">0 / 0</span>
-    </div>
-    <div class="hud-item portal">
-        <span class="label">Портал</span>
-        <span class="value" id="hud-portal">ЗАКРЫТ</span>
-    </div>
-    <div class="hud-item" style="background: rgba(100, 255, 200, 0.1); border-color: rgba(100, 255, 200, 0.3);">
-        <span class="icon">👤</span>
-        <span class="value" id="hud-personal" style="color: #88ffcc;">0</span>
+
+    <!-- Правая часть: Ресурсы + Меню -->
+    <div class="right-group">
+        <div class="hud-element resources">
+            <div class="res-item"><span class="icon">🍓</span> <span class="val" id="hud-berries">0/0</span></div>
+            <div class="res-item"><span class="icon">💎</span> <span class="val" id="hud-crystals">0/0</span></div>
+            <div class="res-item" id="nut-res-item"><span class="icon">🌰</span> <span class="val" id="hud-nuts">0/0</span></div>
+        </div>
+        
+        <button class="hud-element menu-btn" id="profile-menu-btn" title="Меню">
+            <div class="menu-icon">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </button>
     </div>
 </div>
 
@@ -162,7 +164,6 @@
 <!-- ЭМОЦИИ (Колесо) -->
 <div class="emote-wheel" id="emoteWheel">
     <div class="wheel-container" id="wheelContainer">
-        <!-- Центральный кружок убран, так как там будет персонаж -->
         <div class="emote-sector pos-up" data-emote="heart" data-key="1">❤️ <span class="sector-key">1</span></div>
         <div class="emote-sector pos-right" data-emote="laugh" data-key="2">😂 <span class="sector-key">2</span></div>
         <div class="emote-sector pos-down" data-emote="sad" data-key="3">😢 <span class="sector-key">3</span></div>

@@ -21,7 +21,11 @@
     let socket = null;
     let myId = localStorage.getItem('kz_session_id') || null;
     let serverSeed = null;
-    
+
+
+    let playerXP = parseInt(localStorage.getItem('kz_xp')) || 0;
+    let playerLevel = parseInt(localStorage.getItem('kz_level')) || 1;
+    let xpForNextLevel = playerLevel * 100;
     let myPlayer = null;
     const otherPlayers = {};
     
@@ -275,6 +279,13 @@
     const btnWait = document.getElementById('btn-wait');
     const btnLeaveAlone = document.getElementById('btn-leave-alone');
     const btnSoloNext = document.getElementById('btn-solo-next');
+    const profileNick = document.getElementById('profile-nick');
+    const profileLevel = document.getElementById('profile-level');
+    const profileLives = document.getElementById('profile-lives');
+    const profileAvatar = document.getElementById('profile-avatar');
+    const profileXpFill = document.getElementById('profile-xp-fill');
+    const profileXpText = document.getElementById('profile-xp-text');
+    const profileMenuBtn = document.getElementById('profile-menu-btn');
 
     // Чат
     const chatBox = document.getElementById('chat');
@@ -329,6 +340,22 @@
         }
     }
 
+    function updateProfileUI() {
+        if (!myPlayer) return;
+        
+        profileNick.textContent = myPlayer.nickname || 'Игрок';
+        profileNick.style.color = myPlayer.nickColor || '#d0e0ff';
+        profileAvatar.style.background = myPlayer.customColor || '#ffd84a';
+        profileAvatar.style.color = myPlayer.customColor || '#ffd84a'; // Для свечения
+        
+        profileLives.textContent = '❤️'.repeat(Math.max(0, myPlayer.lives));
+        
+        profileLevel.textContent = `Lvl ${playerLevel}`;
+        const xpPercent = Math.min(100, (playerXP / xpForNextLevel) * 100);
+        profileXpFill.style.width = `${xpPercent}%`;
+        profileXpText.textContent = `${playerXP} / ${xpForNextLevel} XP`;
+    }
+
     function checkPickup() {
         if (!myPlayer) return;
         const T = Level.tileSize;
@@ -342,16 +369,34 @@
             socket.send(JSON.stringify({ type: 'collect', id: myId, gx: gx, gy: gy, itemType: result.type }));
         }
 
+        let xpGained = 0;
         if (result.type === 'berry') {
             if (window.Audio) Audio.play(880, 0.1, 'sine', 0.06);
             if (window.Particles) Particles.spawn(gx * T + T / 2, gy * T + T / 2, '#ff5070', 10, 4);
+            xpGained = 5;
         } else if (result.type === 'crystal') {
             if (window.Audio) Audio.play(1046, 0.15, 'triangle', 0.07);
             if (window.Particles) Particles.spawn(gx * T + T / 2, gy * T + T / 2, '#a8d8ff', 14, 5);
+            xpGained = 10;
         } else if (result.type === 'nut') {
             myPlayer.hasNut = true;
             if (window.Audio) Audio.play(660, 0.2, 'triangle', 0.1);
             if (window.Particles) Particles.spawn(gx * T + T / 2, gy * T + T / 2, '#ffcc33', 16, 5);
+            xpGained = 20;
+        }
+        
+        // Начисляем опыт и проверяем уровень
+        if (xpGained > 0) {
+            playerXP += xpGained;
+            while (playerXP >= xpForNextLevel) {
+                playerXP -= xpForNextLevel;
+                playerLevel++;
+                xpForNextLevel = playerLevel * 100;
+                addChatMessage('Система', `🎉 Вы достигли ${playerLevel} уровня!`, true);
+            }
+            localStorage.setItem('kz_xp', playerXP);
+            localStorage.setItem('kz_level', playerLevel);
+            updateProfileUI();
         }
     }
 
@@ -366,6 +411,19 @@
     }
 
     function winLevel() {
+        // ─── НАЧИСЛЕНИЕ ОПЫТА ЗА ФИНИШ ───
+        playerXP += 50; 
+        while (playerXP >= xpForNextLevel) {
+            playerXP -= xpForNextLevel;
+            playerLevel++;
+            xpForNextLevel = playerLevel * 100;
+            addChatMessage('Система', `🎉 Вы достигли ${playerLevel} уровня!`, true);
+        }
+        localStorage.setItem('kz_xp', playerXP);
+        localStorage.setItem('kz_level', playerLevel);
+        updateProfileUI();
+        // ─────────────────────────────────
+
         window.__gameActive = false;
         paused = true;
 
@@ -691,13 +749,33 @@
     }
 
     // ─── КНОПКИ ───────────────────────────────────────────
+    // ─── КНОПКИ ───────────────────────────────────────────
     if (btnNext) btnNext.addEventListener('click', () => { location.reload(); });
     if (btnRestart) btnRestart.addEventListener('click', () => location.reload());
-    if (btnToMap) btnToMap.addEventListener('click', () => { localStorage.removeItem('kz_current_room'); location.href = 'map.html'; });
+    if (btnToMap) btnToMap.addEventListener('click', () => { 
+        localStorage.removeItem('kz_current_room'); 
+        localStorage.removeItem('kz_xp'); 
+        localStorage.removeItem('kz_level'); 
+        location.href = 'map.html'; 
+    });
     if (btnResume) btnResume.addEventListener('click', resumeGame);
     if (btnPauseRestart) btnPauseRestart.addEventListener('click', () => location.reload());
     if (btnPauseSettings) btnPauseSettings.addEventListener('click', () => { if (pauseSettings) pauseSettings.classList.toggle('hidden'); });
-    if (btnPauseMenu) btnPauseMenu.addEventListener('click', () => { localStorage.removeItem('kz_current_room'); location.href = 'index.html'; });
+    if (btnPauseMenu) btnPauseMenu.addEventListener('click', () => { 
+        localStorage.removeItem('kz_current_room'); 
+        localStorage.removeItem('kz_xp'); 
+        localStorage.removeItem('kz_level'); 
+        location.href = 'index.html'; 
+    });
+
+    // ОБРАБОТЧИК ШЕСТЕРЕНКИ (Профиль)
+    if (profileMenuBtn) {
+        profileMenuBtn.addEventListener('click', () => {
+            if (window.__gameActive && !winScreen.classList.contains('visible')) {
+                if (paused) resumeGame(); else pauseGame();
+            }
+        });
+    }
 
     if (btnWait) {
         btnWait.addEventListener('click', () => {
@@ -712,6 +790,8 @@
                 socket.send(JSON.stringify({ type: 'leave', id: myId }));
             }
             localStorage.removeItem('kz_current_room');
+            localStorage.removeItem('kz_xp');      // <--- Сброс опыта
+            localStorage.removeItem('kz_level');   // <--- Сброс уровня
             setTimeout(() => { location.href = 'index.html'; }, 100);
         });
     }

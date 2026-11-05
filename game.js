@@ -464,15 +464,15 @@
         const p = Level.state.personal || { berries: 0, crystals: 0, nuts: 0 };
         
         if (winStats) {
-            // Берем текущий уровень и опыт (они уже обновились до этого момента)
+            // Берем текущий уровень и опыт (они уже обновились после начисления +50 XP)
             const currentXp = playerXP;
             const neededXp = xpForNextLevel;
             const xpPercent = Math.min(100, (currentXp / neededXp) * 100);
 
             winStats.innerHTML = `
-                <div class="stat-row"><span>🍓 Ягоды (общие)</span><b>${s.berries} / ${Level.state.totalBerries}</b></div>
-                <div class="stat-row"><span>💎 Кристаллы (общие)</span><b>${s.crystals} / ${Level.state.totalCrystals}</b></div>
-                <div class="stat-row"><span>🌰 Орехи (общие)</span><b>${s.nuts} / ${Level.state.totalNuts}</b></div>
+                <div class="stat-row"><span>🍓 Ягоды</span><b>${s.berries} / ${Level.state.totalBerries}</b></div>
+                <div class="stat-row"><span>💎 Кристаллы</span><b>${s.crystals} / ${Level.state.totalCrystals}</b></div>
+                <div class="stat-row"><span>🌰 Орехи</span><b>${s.nuts} / ${Level.state.totalNuts}</b></div>
                 
                 <div class="stat-divider"></div>
                 
@@ -480,10 +480,22 @@
                 
                 <div class="stat-divider"></div>
                 
+                <!-- БЛОК НАГРАДЫ -->
+                <div class="reward-block">
+                    <div class="reward-title">ТВОЯ НАГРАДА</div>
+                    <div class="reward-items">
+                        <div class="reward-item">
+                            <span class="reward-icon">⭐</span>
+                            <span class="reward-value">+50 XP</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ПОЛОСКА ОПЫТА -->
                 <div class="xp-gained-block">
                     <div class="xp-gained-text">
-                        <span>Опыт (Lvl ${playerLevel})</span>
-                        <b>+50 XP</b>
+                        <span>Уровень ${playerLevel}</span>
+                        <span>${currentXp} / ${neededXp} XP</span>
                     </div>
                     <div class="xp-bar-bg">
                         <div class="xp-bar-fill" style="width: ${xpPercent}%;"></div>

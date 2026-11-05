@@ -350,13 +350,20 @@
             else nutResItem.classList.remove('complete');
         }
 
+        // --- ЭВАКУАЦИЯ (заполняется до порога открытия) ---
         const totalNeeded = Level.state.totalBerries + Level.state.totalCrystals;
+        const threshold = totalNeeded / 2; // Порог открытия портала
         const totalCollected = s.berries + s.crystals;
-        const percent = totalNeeded > 0 ? Math.min(100, (totalCollected / totalNeeded) * 100) : 100;
+        
+        // Процент заполнения полосы (от 0 до 100)
+        const percent = threshold > 0 ? Math.min(100, (totalCollected / threshold) * 100) : 100;
         
         if (portalFill) portalFill.style.width = `${percent}%`;
         
-        if (percent >= 100) {
+        // Проверяем, открыт ли портал по правилам игры
+        const isOpen = Level.isPortalOpen();
+        
+        if (isOpen) {
             if (portalBlock) portalBlock.classList.add('open');
             portalOpen = true;
         } else {

@@ -494,15 +494,15 @@
                     <div class="rewards-title">Твоя награда</div>
                     <div class="reward-row">
                         <span>Место:</span>
-                        <b style="color: #ffd84a;">${placeIcon} ${placeText}</b>
+                        <b style="color: #ffd84a;">🥇 1-е место</b>
                     </div>
                     <div class="reward-row">
                         <span>Опыт за место:</span>
-                        <b>+${xpBonus} XP</b>
+                        <b>+100 XP</b>
                     </div>
                     <div class="reward-row">
                         <span>Бонусные орехи:</span>
-                        <b>+${nutBonus} 🌰</b>
+                        <b>+5 🌰</b>
                     </div>
                 </div>
 

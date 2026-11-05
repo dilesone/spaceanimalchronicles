@@ -123,13 +123,13 @@ canvas#c { display: block; width: 100%; height: 100%; }
 .res-item .val { color: #a8c8ff; font-variant-numeric: tabular-nums; }
 .res-item.complete .val { color: #88ffcc; text-shadow: 0 0 5px rgba(136, 255, 204, 0.4); }
 
-.menu-btn {
+.burger-btn {
     width: 56px; justify-content: center; cursor: pointer; padding: 0; transition: all 0.2s;
 }
-.menu-btn:hover { background: rgba(100, 150, 255, 0.15); }
+.burger-btn:hover { background: rgba(100, 150, 255, 0.15); }
 .menu-icon { display: flex; flex-direction: column; gap: 4px; }
 .menu-icon span { display: block; width: 20px; height: 2px; background: #8a9ac8; border-radius: 1px; transition: all 0.2s; }
-.menu-btn:hover .menu-icon span { background: #fff; }
+.burger-btn:hover .menu-icon span { background: #fff; }
 
 /* ═══════════════ ПОДСКАЗКА УПРАВЛЕНИЯ ═══════════════ */
 .controls-hint {

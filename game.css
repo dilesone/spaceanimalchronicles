@@ -428,7 +428,7 @@ canvas#c { display: block; width: 100%; height: 100%; }
     flex-direction: column;
     align-items: center;
     text-align: center;
-    max-width: 480px; /* Чуть уже */
+    max-width: 480px;
     width: 100%;
     background: rgba(15, 15, 30, 0.85);
     border: 1px solid rgba(100, 150, 255, 0.2);
@@ -502,6 +502,50 @@ canvas#c { display: block; width: 100%; height: 100%; }
     margin: 4px 0;
 }
 
+/* Блок награды (как в Трагедии Белок) */
+.reward-block {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 8px;
+    padding: 12px;
+    background: rgba(255, 216, 74, 0.08);
+    border: 1px solid rgba(255, 216, 74, 0.2);
+    border-radius: 12px;
+}
+
+.reward-title {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 10px;
+    font-weight: 800;
+    color: #ffd84a;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    text-align: center;
+}
+
+.reward-items {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+}
+
+.reward-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 16px;
+    font-weight: 800;
+    color: #ffd84a;
+    text-shadow: 0 0 10px rgba(255, 216, 74, 0.4);
+}
+
+.reward-icon {
+    font-size: 20px;
+}
+
 /* Блок опыта */
 .xp-gained-block {
     display: flex;
@@ -518,11 +562,6 @@ canvas#c { display: block; width: 100%; height: 100%; }
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 1px;
-}
-
-.xp-gained-text b {
-    color: #ffd84a;
-    font-size: 14px;
 }
 
 .xp-bar-bg {

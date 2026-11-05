@@ -587,6 +587,13 @@
     function pauseGame() {
         if (paused) return;
         paused = true;
+        
+        // Мгновенно усыпляем персонажа
+        if (myPlayer) {
+            myPlayer.isSleeping = true;
+            myPlayer.idleTimer = 0; // Сбрасываем таймер, чтобы при выходе из паузы он снова начал считать
+        }
+
         if (pauseScreen) pauseScreen.classList.add('visible');
         if (pauseSettings) pauseSettings.classList.add('hidden');
         syncSettingsUI();
@@ -594,6 +601,13 @@
 
     function resumeGame() {
         paused = false;
+        
+        // Будим персонажа
+        if (myPlayer) {
+            myPlayer.isSleeping = false;
+            myPlayer.idleTimer = 0;
+        }
+
         if (pauseScreen) pauseScreen.classList.remove('visible');
         if (window.Audio) Audio.init();
     }

@@ -59,11 +59,11 @@
             this.targetY = 600;
             
             this.keys = { left: false, right: false, jump: false, dash: false };
-            
-            this.chatBubble = null;
-            this.chatBubbleTime = 0;
             this.idleTimer = 0;      // Счетчик бездействия
             this.isSleeping = false; // Флаг сна
+            this.chatBubble = null;
+            this.chatBubbleTime = 0;
+
         }
 
         loadNickname() {

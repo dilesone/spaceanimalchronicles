@@ -114,7 +114,8 @@
                     }
                 } 
                 else if (data.type === 'online') {
-                    if (onlineElement) onlineElement.textContent = `(онлайн ${data.count})`;
+                    const el = document.getElementById('online-count');
+                    if (el) el.textContent = `(онлайн ${data.count})`;
                 }
                 else if (data.type === 'chat') {
                     addChatMessage(data.author, data.text, false, data.color);

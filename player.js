@@ -62,6 +62,8 @@
             
             this.chatBubble = null;
             this.chatBubbleTime = 0;
+            this.idleTimer = 0;      // Счетчик бездействия
+            this.isSleeping = false; // Флаг сна
         }
 
         loadNickname() {

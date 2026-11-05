@@ -442,6 +442,7 @@
     }
 
     function winLevel() {
+        // Начисляем опыт за прохождение
         playerXP += 50; 
         while (playerXP >= xpForNextLevel) {
             playerXP -= xpForNextLevel;
@@ -456,6 +457,7 @@
         window.__gameActive = false;
         paused = true;
 
+        // Отправляем серверу, что мы финишировали
         if (socket && socket.readyState === WebSocket.OPEN && myPlayer) {
             socket.send(JSON.stringify({ type: 'finish', id: myId, nickname: myPlayer.nickname }));
         }
@@ -463,37 +465,49 @@
         const s = Level.state.collected;
         const p = Level.state.personal || { berries: 0, crystals: 0, nuts: 0 };
         
+        // Пока ставим 1-е место для всех (потом сделаем на сервере)
+        const place = 1; 
+        const placeIcon = '🥇';
+        const placeText = '1-е место';
+        const xpBonus = 100; 
+        const nutBonus = 5;
+
         if (winStats) {
-            // Берем текущий уровень и опыт (они уже обновились после начисления +50 XP)
             const currentXp = playerXP;
             const neededXp = xpForNextLevel;
             const xpPercent = Math.min(100, (currentXp / neededXp) * 100);
 
             winStats.innerHTML = `
-                <div class="stat-row"><span>🍓 Ягоды</span><b>${s.berries} / ${Level.state.totalBerries}</b></div>
-                <div class="stat-row"><span>💎 Кристаллы</span><b>${s.crystals} / ${Level.state.totalCrystals}</b></div>
-                <div class="stat-row"><span>🌰 Орехи</span><b>${s.nuts} / ${Level.state.totalNuts}</b></div>
-                
-                <div class="stat-divider"></div>
-                
-                <div class="stat-row"><span>👤 Личный вклад</span><b>${p.berries + p.crystals + p.nuts}</b></div>
-                
-                <div class="stat-divider"></div>
-                
-                <!-- БЛОК НАГРАДЫ -->
-                <div class="reward-block">
-                    <div class="reward-title">ТВОЯ НАГРАДА</div>
-                    <div class="reward-items">
-                        <div class="reward-item">
-                            <span class="reward-icon">⭐</span>
-                            <span class="reward-value">+50 XP</span>
-                        </div>
+                <!-- ТВОЯ ДОБЫЧА -->
+                <div class="stats-box">
+                    <div class="stats-title">Твоя добыча</div>
+                    <div class="stats-grid">
+                        <div class="stat-item">🍓 Ягоды <b>${p.berries}</b></div>
+                        <div class="stat-item">💎 Кристаллы <b>${p.crystals}</b></div>
+                        <div class="stat-item">🌰 Орехи <b>${p.nuts}</b></div>
+                    </div>
+                </div>
+
+                <!-- НАГРАДА -->
+                <div class="rewards-box">
+                    <div class="rewards-title">Твоя награда</div>
+                    <div class="reward-row">
+                        <span>Место:</span>
+                        <b style="color: #ffd84a;">${placeIcon} ${placeText}</b>
+                    </div>
+                    <div class="reward-row">
+                        <span>Опыт за место:</span>
+                        <b>+${xpBonus} XP</b>
+                    </div>
+                    <div class="reward-row">
+                        <span>Бонусные орехи:</span>
+                        <b>+${nutBonus} 🌰</b>
                     </div>
                 </div>
 
                 <!-- ПОЛОСКА ОПЫТА -->
-                <div class="xp-gained-block">
-                    <div class="xp-gained-text">
+                <div class="xp-box">
+                    <div class="xp-header">
                         <span>Уровень ${playerLevel}</span>
                         <span>${currentXp} / ${neededXp} XP</span>
                     </div>
@@ -506,7 +520,13 @@
 
         if (winScreen) winScreen.classList.add('visible');
         if (btnNext) btnNext.style.display = 'none';
-        if (btnWait) { btnWait.style.display = 'block'; btnWait.textContent = '⏳ Ожидание...'; btnWait.disabled = true; }
+        
+        // Кнопка "Ждать" просто показывает статус, она неактивна
+        if (btnWait) { 
+            btnWait.style.display = 'block'; 
+            btnWait.textContent = '⏳ Ожидание игроков...'; 
+            btnWait.disabled = true; 
+        }
     }
 
     const settings = { centerMap: true, followPlayer: false };

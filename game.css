@@ -55,7 +55,13 @@ canvas#c { display: block; width: 100%; height: 100%; }
 .profile-xp-fill { width: 0%; height: 100%; background: #88ffcc; border-radius: 2px; box-shadow: 0 0 5px #88ffcc; transition: width 0.3s; }
 
 /* ─── ЦЕНТР ─── */
-.center-group { display: flex; gap: 12px; }
+.center-group { 
+    position: absolute; 
+    left: 50%; 
+    transform: translateX(-50%); 
+    display: flex; 
+    gap: 12px; 
+}
 
 .timer-box {
     padding: 0 20px;

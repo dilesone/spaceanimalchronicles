@@ -123,10 +123,14 @@
         
         <!-- Кнопки -->
         <div class="buttons win-buttons">
-            <button class="menu-btn" id="btn-wait" style="display: none;">⏳ Ожидание...</button>
+            <!-- Кнопка ожидания (неактивна, показываем для информации) -->
+            <button class="menu-btn" id="btn-wait" disabled style="opacity: 0.7; cursor: default;">⏳ Ожидание игроков...</button>
+            
+            <!-- Кнопка "Продолжить один" -->
             <button class="menu-btn" id="btn-solo-next">🎲 Продолжить один</button>
-            <button class="menu-btn" id="btn-leave-alone">🚪 Уйти одному (в меню)</button>
-            <button class="menu-btn" id="btn-next" style="display: none;">🎲 Следующий уровень</button>
+            
+            <!-- Кнопка "В меню" -->
+            <button class="menu-btn" id="btn-leave-alone">🚪 Уйти в меню</button>
         </div>
     </div>
 </div>

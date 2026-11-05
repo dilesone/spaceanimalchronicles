@@ -89,31 +89,67 @@ canvas#c { display: block; width: 100%; height: 100%; }
 }
 
 .portal-block {
-    padding: 0 16px;
+    padding: 0 20px; /* Чуть больше отступы по бокам */
     gap: 12px;
-    min-width: 180px;
+    min-width: 220px; /* Сделали блок шире, чтобы слово влезло */
     transition: all 0.3s;
 }
-.portal-icon { font-size: 18px; color: #8a9ac8; transition: all 0.3s; }
-.portal-data { display: flex; flex-direction: column; gap: 6px; flex: 1; }
-.portal-title {
-    font-size: 10px; font-weight: 700; letter-spacing: 1px; color: #8a9ac8;
-    text-transform: uppercase; transition: all 0.3s;
+.portal-icon { 
+    font-size: 22px; /* Иконку тоже увеличили */
+    color: #8a9ac8; 
+    transition: all 0.3s; 
 }
-.portal-bar-bg { width: 100%; height: 4px; background: rgba(0,0,0,0.5); border-radius: 2px; overflow: hidden; }
-.portal-bar-fill { width: 0%; height: 100%; background: #8a9ac8; border-radius: 2px; transition: all 0.3s; }
+.portal-data { 
+    display: flex; 
+    flex-direction: column; 
+    gap: 4px; 
+    flex: 1; 
+    justify-content: center;
+}
+.portal-title {
+    font-size: 16px; /* УВЕЛИЧИЛИ ШРИФТ */
+    font-weight: 800; /* СДЕЛАЛИ ЖИРНЫМ */
+    letter-spacing: 3px; /* ДОБАВИЛИ РАЗРЯДКУ */
+    color: #8a9ac8;
+    text-transform: uppercase; 
+    transition: all 0.3s;
+    text-align: center; /* ВЫРОВНЯЛИ ПО ЦЕНТРУ */
+    line-height: 1;
+}
+.portal-bar-bg { 
+    width: 100%; 
+    height: 5px; /* Полоску сделали чуть толще */
+    background: rgba(0,0,0,0.5); 
+    border-radius: 3px; 
+    overflow: hidden; 
+}
+.portal-bar-fill { 
+    width: 0%; 
+    height: 100%; 
+    background: #8a9ac8; 
+    border-radius: 3px; 
+    transition: all 0.3s; 
+}
 
+/* Когда портал открыт */
 .portal-block.open {
     border-color: rgba(100, 255, 200, 0.4);
     box-shadow: 0 0 15px rgba(100, 255, 200, 0.15);
 }
 .portal-block.open .portal-icon,
-.portal-block.open .portal-title { color: #88ffcc; text-shadow: 0 0 8px #88ffcc; }
+.portal-block.open .portal-title { 
+    color: #88ffcc; 
+    text-shadow: 0 0 10px #88ffcc; 
+}
 .portal-block.open .portal-bar-fill {
-    background: #88ffcc; box-shadow: 0 0 8px #88ffcc;
+    background: #88ffcc; 
+    box-shadow: 0 0 8px #88ffcc;
     animation: pulse-green 1s infinite alternate;
 }
-@keyframes pulse-green { from { opacity: 0.8; } to { opacity: 1; } }
+@keyframes pulse-green { 
+    from { opacity: 0.8; } 
+    to { opacity: 1; } 
+}
 
 /* ─── ПРАВАЯ ЧАСТЬ ─── */
 .right-group { display: flex; gap: 12px; }

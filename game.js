@@ -36,14 +36,6 @@
     window.otherPlayers = {};
     window.otherNicknames = {};
 
-    let onlineElement = document.getElementById('online-count');
-    if (!onlineElement) {
-        onlineElement = document.createElement('div');
-        onlineElement.id = 'online-count';
-        onlineElement.style.cssText = 'position:fixed; top:10px; right:10px; color:white; background:rgba(0,0,0,0.5); padding:5px; z-index:9999; font-family:sans-serif; border-radius:4px;';
-        document.body.appendChild(onlineElement);
-    }
-
     async function findRoom() {
         const isAfterFinish = sessionStorage.getItem('kz_after_finish');
         if (isAfterFinish) {
@@ -122,7 +114,7 @@
                     }
                 } 
                 else if (data.type === 'online') {
-                    onlineElement.textContent = `Онлайн: ${data.count}`;
+                    if (onlineElement) onlineElement.textContent = `(онлайн ${data.count})`;
                 }
                 else if (data.type === 'chat') {
                     addChatMessage(data.author, data.text, false, data.color);

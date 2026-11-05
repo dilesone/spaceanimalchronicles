@@ -80,6 +80,8 @@
 
         bindKeys() {
             if (!this.isLocal) return;
+            
+            // Клавиатура
             window.addEventListener('keydown', e => {
                 if (e.target.tagName === 'INPUT') return;
                 const k = e.key.toLowerCase();
@@ -88,6 +90,7 @@
                 if (['arrowup', 'w', 'ц', ' '].includes(k)) { this.keys.jump = true; e.preventDefault(); }
                 if (['shift', 'k', 'л'].includes(k)) this.keys.dash = true;
             });
+            
             window.addEventListener('keyup', e => {
                 if (e.target.tagName === 'INPUT') return;
                 const k = e.key.toLowerCase();
@@ -96,6 +99,38 @@
                 if (['arrowup', 'w', 'ц', ' '].includes(k)) this.keys.jump = false;
                 if (['shift', 'k', 'л'].includes(k)) this.keys.dash = false;
             });
+
+            // ─── МОБИЛЬНОЕ УПРАВЛЕНИЕ ───
+            const btnLeft = document.getElementById('btn-left');
+            const btnRight = document.getElementById('btn-right');
+            const btnJump = document.getElementById('btn-jump');
+            const btnDash = document.getElementById('btn-dash');
+
+            const bindTouch = (el, key) => {
+                if (!el) return;
+                el.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    this.keys[key] = true;
+                }, { passive: false });
+                el.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    this.keys[key] = false;
+                }, { passive: false });
+                // Для теста мышкой
+                el.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    this.keys[key] = true;
+                });
+                el.addEventListener('mouseup', (e) => {
+                    e.preventDefault();
+                    this.keys[key] = false;
+                });
+            };
+
+            bindTouch(btnLeft, 'left');
+            bindTouch(btnRight, 'right');
+            bindTouch(btnJump, 'jump');
+            bindTouch(btnDash, 'dash');
         }
 
         collideX(dx) {

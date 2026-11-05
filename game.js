@@ -464,11 +464,31 @@
         const p = Level.state.personal || { berries: 0, crystals: 0, nuts: 0 };
         
         if (winStats) {
+            // Берем текущий уровень и опыт (они уже обновились до этого момента)
+            const currentXp = playerXP;
+            const neededXp = xpForNextLevel;
+            const xpPercent = Math.min(100, (currentXp / neededXp) * 100);
+
             winStats.innerHTML = `
                 <div class="stat-row"><span>🍓 Ягоды (общие)</span><b>${s.berries} / ${Level.state.totalBerries}</b></div>
                 <div class="stat-row"><span>💎 Кристаллы (общие)</span><b>${s.crystals} / ${Level.state.totalCrystals}</b></div>
                 <div class="stat-row"><span>🌰 Орехи (общие)</span><b>${s.nuts} / ${Level.state.totalNuts}</b></div>
-                <div class="stat-row" style="margin-top:10px; border-top:1px solid #444; padding-top:10px;"><span>👤 Личный вклад</span><b>${p.berries + p.crystals + p.nuts}</b></div>
+                
+                <div class="stat-divider"></div>
+                
+                <div class="stat-row"><span>👤 Личный вклад</span><b>${p.berries + p.crystals + p.nuts}</b></div>
+                
+                <div class="stat-divider"></div>
+                
+                <div class="xp-gained-block">
+                    <div class="xp-gained-text">
+                        <span>Опыт (Lvl ${playerLevel})</span>
+                        <b>+50 XP</b>
+                    </div>
+                    <div class="xp-bar-bg">
+                        <div class="xp-bar-fill" style="width: ${xpPercent}%;"></div>
+                    </div>
+                </div>
             `;
         }
 

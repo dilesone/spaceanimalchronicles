@@ -115,10 +115,15 @@
     <div class="win-panel">
         <h1>ЭВАКУАЦИЯ!</h1>
         <div class="subtitle">Ты добрался до портала с орехом</div>
-        <div class="stats-block" id="win-stats"></div>
         
-        <div class="buttons">
-            <button class="menu-btn" id="btn-wait">⏳ Ожидание...</button>
+        <!-- Статистика и Опыт -->
+        <div class="win-stats-container" id="win-stats">
+            <!-- Сюда JS вставит статистику и опыт -->
+        </div>
+        
+        <!-- Кнопки -->
+        <div class="buttons win-buttons">
+            <button class="menu-btn" id="btn-wait" style="display: none;">⏳ Ожидание...</button>
             <button class="menu-btn" id="btn-solo-next">🎲 Продолжить один</button>
             <button class="menu-btn" id="btn-leave-alone">🚪 Уйти одному (в меню)</button>
             <button class="menu-btn" id="btn-next" style="display: none;">🎲 Следующий уровень</button>

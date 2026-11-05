@@ -24,9 +24,8 @@
     let qPressed = false;
     let myId = localStorage.getItem('kz_session_id') || null;
     let serverSeed = null;
-
-
-    let roundTime = 300; // 5 минут
+    
+    let roundTime = 300;
     let roundTimerInterval = null;
     let playerXP = parseInt(localStorage.getItem('kz_xp')) || 0;
     let playerLevel = parseInt(localStorage.getItem('kz_level')) || 1;
@@ -101,7 +100,8 @@
                             if (data.collected) Level.state.collected = data.collected;
                             if (data.personal) Level.state.personal = data.personal;
                             updateHUD();
-                            startRoundTimer(); // <--- ДОБАВИТЬ ЭТУ СТРОКУ
+                            updateProfileUI();
+                            startRoundTimer();
                             
                             const maxX = Level.pixelWidth() - viewW;
                             const maxY = Level.pixelHeight() - viewH;
@@ -127,7 +127,6 @@
                 else if (data.type === 'chat') {
                     addChatMessage(data.author, data.text, false, data.color);
                     
-                    // Ищем игрока по нику и показываем пузырь
                     if (myPlayer && data.author === myPlayer.nickname) {
                         myPlayer.chatBubble = data.text;
                         myPlayer.chatBubbleTime = Date.now();
@@ -142,7 +141,6 @@
                     }
                 }
                 else if (data.type === 'emote') {
-                    // Показываем эмоцию у другого игрока
                     for (const id in otherPlayers) {
                         if (otherPlayers[id].nickname === data.nickname) {
                             showEmote(otherPlayers[id], data.emoji);
@@ -266,11 +264,11 @@
             terrain: 'ground'
         });
     }
+
     // ─── DOM ──────────────────────────────────────────────
     const canvas = document.getElementById('c');
     const ctx = canvas.getContext('2d');
     
-    // Новый HUD
     const hudTimer = document.getElementById('hud-timer');
     const portalBlock = document.getElementById('portal-block');
     const portalFill = document.getElementById('portal-fill');
@@ -300,7 +298,6 @@
     const btnLeaveAlone = document.getElementById('btn-leave-alone');
     const btnSoloNext = document.getElementById('btn-solo-next');
     
-    // Профиль
     const profileNick = document.getElementById('profile-nick');
     const profileLevel = document.getElementById('profile-level');
     const profileLives = document.getElementById('profile-lives');
@@ -308,7 +305,6 @@
     const profileXpFill = document.getElementById('profile-xp-fill');
     const profileMenuBtn = document.getElementById('profile-menu-btn');
     
-    // Эмоции
     const emoteWheel = document.getElementById('emoteWheel');
     const wheelContainer = document.getElementById('wheelContainer');
 
@@ -325,6 +321,7 @@
     const chatSound = document.getElementById('chat-sound');
     const chatSystem = document.getElementById('chat-system');
     const chatClear = document.getElementById('chat-clear');
+
     let viewW = window.innerWidth;
     let viewH = window.innerHeight;
     let camX = 0, camY = 0;
@@ -341,22 +338,18 @@
     window.addEventListener('resize', resize);
     resize();
 
-        function updateHUD() {
+    function updateHUD() {
         const s = Level.state.collected;
-        const p = Level.state.personal || { berries: 0, crystals: 0, nuts: 0 };
 
-        // Ресурсы (формат собрано/всего)
         if (hudBerries) hudBerries.textContent = `${s.berries}/${Level.state.totalBerries}`;
         if (hudCrystals) hudCrystals.textContent = `${s.crystals}/${Level.state.totalCrystals}`;
         if (hudNuts) hudNuts.textContent = `${s.nuts}/${Level.state.totalNuts}`;
         
-        // Подсветка ореха (зеленым), если он собран
         if (nutResItem) {
             if (s.nuts >= Level.state.totalNuts) nutResItem.classList.add('complete');
             else nutResItem.classList.remove('complete');
         }
 
-        // Эвакуация (заполняем полоску)
         const totalNeeded = Level.state.totalBerries + Level.state.totalCrystals;
         const totalCollected = s.berries + s.crystals;
         const percent = totalNeeded > 0 ? Math.min(100, (totalCollected / totalNeeded) * 100) : 100;
@@ -375,17 +368,24 @@
     function updateProfileUI() {
         if (!myPlayer) return;
         
-        profileNick.textContent = myPlayer.nickname || 'Игрок';
-        profileNick.style.color = myPlayer.nickColor || '#d0e0ff';
-        profileAvatar.style.background = myPlayer.customColor || '#ffd84a';
-        profileAvatar.style.color = myPlayer.customColor || '#ffd84a'; // Для свечения
-        
-        profileLives.textContent = '❤️'.repeat(Math.max(0, myPlayer.lives));
-        
-        profileLevel.textContent = `Lvl ${playerLevel}`;
-        const xpPercent = Math.min(100, (playerXP / xpForNextLevel) * 100);
-        profileXpFill.style.width = `${xpPercent}%`;
-        profileXpText.textContent = `${playerXP} / ${xpForNextLevel} XP`;
+        if (profileNick) {
+            profileNick.textContent = myPlayer.nickname || 'Игрок';
+            profileNick.style.color = myPlayer.nickColor || '#d0e0ff';
+        }
+        if (profileAvatar) {
+            profileAvatar.style.background = myPlayer.customColor || '#ffd84a';
+            profileAvatar.style.color = myPlayer.customColor || '#ffd84a';
+        }
+        if (profileLives) {
+            profileLives.textContent = '❤️'.repeat(Math.max(0, myPlayer.lives));
+        }
+        if (profileLevel) {
+            profileLevel.textContent = `Lvl ${playerLevel}`;
+        }
+        if (profileXpFill) {
+            const xpPercent = Math.min(100, (playerXP / xpForNextLevel) * 100);
+            profileXpFill.style.width = `${xpPercent}%`;
+        }
     }
 
     function checkPickup() {
@@ -417,7 +417,6 @@
             xpGained = 20;
         }
         
-        // Начисляем опыт и проверяем уровень
         if (xpGained > 0) {
             playerXP += xpGained;
             while (playerXP >= xpForNextLevel) {
@@ -443,7 +442,6 @@
     }
 
     function winLevel() {
-        // ─── НАЧИСЛЕНИЕ ОПЫТА ЗА ФИНИШ ───
         playerXP += 50; 
         while (playerXP >= xpForNextLevel) {
             playerXP -= xpForNextLevel;
@@ -454,7 +452,6 @@
         localStorage.setItem('kz_xp', playerXP);
         localStorage.setItem('kz_level', playerLevel);
         updateProfileUI();
-        // ─────────────────────────────────
 
         window.__gameActive = false;
         paused = true;
@@ -491,8 +488,6 @@
         if (settingCenter) settingCenter.checked = settings.centerMap;
         if (settingFollow) settingFollow.checked = settings.followPlayer;
         if (pauseNickname && myPlayer) pauseNickname.value = myPlayer.nickname || 'Игрок';
-        if (pauseColor && myPlayer) pauseColor.value = myPlayer.customColor || '#ffd84a';
-        if (pauseNickColor && myPlayer) pauseNickColor.value = myPlayer.nickColor || '#d0e0ff';
     }
     syncSettingsUI();
 
@@ -518,22 +513,9 @@
             const nick = pauseNickname.value.trim() || 'Игрок';
             if (myPlayer) myPlayer.nickname = nick;
             try { localStorage.setItem('kz_nickname', nick); } catch (e) {}
+            updateProfileUI();
         });
         pauseNickname.addEventListener('keydown', (e) => e.stopPropagation());
-    }
-
-    if (pauseColor) {
-        pauseColor.addEventListener('input', () => {
-            if (myPlayer) myPlayer.customColor = pauseColor.value;
-            try { localStorage.setItem('kz_color', pauseColor.value); } catch (e) {}
-        });
-    }
-
-    if (pauseNickColor) {
-        pauseNickColor.addEventListener('input', () => {
-            if (myPlayer) myPlayer.nickColor = pauseNickColor.value;
-            try { localStorage.setItem('kz_nick_color', pauseNickColor.value); } catch (e) {}
-        });
     }
 
     function updateCamera() {
@@ -618,10 +600,10 @@
             if (e.key === 'Enter') { 
                 e.preventDefault(); 
                 sendChat(); 
-                chatInput.blur(); // Убираем фокус после отправки
+                chatInput.blur();
             }
             if (e.key === 'Escape') { 
-                chatInput.blur(); // Убираем фокус по Escape
+                chatInput.blur();
             }
             e.stopPropagation();
         });
@@ -632,7 +614,6 @@
         const text = (chatInput.value || '').trim();
         if (!text) return;
         
-        // Показываем пузырь у себя
         myPlayer.chatBubble = text;
         myPlayer.chatBubbleTime = Date.now();
         
@@ -800,7 +781,7 @@
 
     function startRoundTimer() {
         if (roundTimerInterval) clearInterval(roundTimerInterval);
-        roundTime = 300; // 5 минут
+        roundTime = 300;
         if (hudTimer) {
             hudTimer.textContent = '05:00';
             hudTimer.classList.remove('danger');
@@ -820,12 +801,11 @@
 
             if (roundTime <= 0) {
                 clearInterval(roundTimerInterval);
-                // Логика конца раунда (если нужна)
             }
         }, 1000);
     }
 
-    // ─── КНОПКИ ───────────────────────────────────────────
+    // КНОПКИ
     if (btnNext) btnNext.addEventListener('click', () => { location.reload(); });
     if (btnRestart) btnRestart.addEventListener('click', () => location.reload());
     if (btnToMap) btnToMap.addEventListener('click', () => { 
@@ -844,7 +824,6 @@
         location.href = 'index.html'; 
     });
 
-    // ОБРАБОТЧИК ШЕСТЕРЕНКИ (Профиль)
     if (profileMenuBtn) {
         profileMenuBtn.addEventListener('click', () => {
             if (window.__gameActive && !winScreen.classList.contains('visible')) {
@@ -866,8 +845,8 @@
                 socket.send(JSON.stringify({ type: 'leave', id: myId }));
             }
             localStorage.removeItem('kz_current_room');
-            localStorage.removeItem('kz_xp');      // <--- Сброс опыта
-            localStorage.removeItem('kz_level');   // <--- Сброс уровня
+            localStorage.removeItem('kz_xp');
+            localStorage.removeItem('kz_level');
             setTimeout(() => { location.href = 'index.html'; }, 100);
         });
     }
@@ -886,28 +865,22 @@
     window.addEventListener('keydown', (e) => {
         if (e.target.tagName === 'INPUT') return;
 
-        // Открытие чата по T
         if (e.key.toLowerCase() === 't') {
             e.preventDefault();
             if (chatInput) chatInput.focus();
             return;
         }
 
-        // Логика эмоций (Q)
         if (e.key.toLowerCase() === 'q' && !qPressed) {
             qPressed = true;
             holdTimer = setTimeout(() => {
                 if (emoteWheel && wheelContainer) {
-                    // Вычисляем экранные координаты игрока
                     if (myPlayer) {
                         const screenX = myPlayer.x - camX + PlayerClass.PHYS.W / 2;
                         const screenY = myPlayer.y - camY + PlayerClass.PHYS.H / 2;
-                        
-                        // Ставим контейнер колеса ровно на эти координаты
                         wheelContainer.style.left = `${screenX}px`;
                         wheelContainer.style.top = `${screenY}px`;
                     }
-                    
                     isWheelOpen = true;
                     emoteWheel.classList.add('visible');
                 }
@@ -945,7 +918,7 @@
             qPressed = false;
             clearTimeout(holdTimer);
             if (isWheelOpen && emoteWheel) {
-                emoteWheel.classList.remove('visible'); // Убираем класс -> display становится none
+                emoteWheel.classList.remove('visible');
                 isWheelOpen = false;
             }
         }
@@ -955,13 +928,12 @@
         if (socket && socket.readyState === WebSocket.OPEN) socket.close();
     });
     
-    // Клик по колесу эмоций (мышкой)
     document.querySelectorAll('.emote-sector').forEach(sector => {
         sector.addEventListener('click', (e) => {
             const emoji = e.currentTarget.innerText.replace(/[1-4]/g, '').trim();
             
             if (emoteWheel) {
-                emoteWheel.classList.remove('visible'); // Убираем класс -> display: none
+                emoteWheel.classList.remove('visible');
             }
             isWheelOpen = false;
             

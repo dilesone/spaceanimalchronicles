@@ -363,15 +363,37 @@
             ctx.fillRect(px + 3, py + 3, PHYS.W - 6, 6);
 
             const eyeY = py + PHYS.H * 0.35;
-            ctx.fillStyle = '#fff';
-            ctx.beginPath(); ctx.arc(px + PHYS.W * 0.3, eyeY, PHYS.W * 0.18, 0, Math.PI * 2); ctx.fill();
-            ctx.beginPath(); ctx.arc(px + PHYS.W * 0.7, eyeY, PHYS.W * 0.18, 0, Math.PI * 2); ctx.fill();
+            
+            if (this.isSleeping) {
+                // Закрытые глаза (дуги)
+                ctx.strokeStyle = '#1a1a2e';
+                ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.arc(px + PHYS.W * 0.3, eyeY, 4, 0, Math.PI); ctx.stroke();
+                ctx.beginPath(); ctx.arc(px + PHYS.W * 0.7, eyeY, 4, 0, Math.PI); ctx.stroke();
+            } else {
+                // Обычные глаза
+                ctx.fillStyle = '#fff';
+                ctx.beginPath(); ctx.arc(px + PHYS.W * 0.3, eyeY, PHYS.W * 0.18, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(px + PHYS.W * 0.7, eyeY, PHYS.W * 0.18, 0, Math.PI * 2); ctx.fill();
 
-            ctx.fillStyle = '#1a1a2e';
-            const pupilX = this.facing * 3;
-            const pupilY = Math.max(-2, Math.min(2, this.vy * 0.3));
-            ctx.beginPath(); ctx.arc(px + PHYS.W * 0.3 + pupilX, eyeY + pupilY, PHYS.W * 0.09, 0, Math.PI * 2); ctx.fill();
-            ctx.beginPath(); ctx.arc(px + PHYS.W * 0.7 + pupilX, eyeY + pupilY, PHYS.W * 0.09, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#1a1a2e';
+                const pupilX = this.facing * 3;
+                const pupilY = Math.max(-2, Math.min(2, this.vy * 0.3));
+                ctx.beginPath(); ctx.arc(px + PHYS.W * 0.3 + pupilX, eyeY + pupilY, PHYS.W * 0.09, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(px + PHYS.W * 0.7 + pupilX, eyeY + pupilY, PHYS.W * 0.09, 0, Math.PI * 2); ctx.fill();
+            }
+
+            // Анимация ZZZ (если спит)
+            if (this.isSleeping) {
+                const time = performance.now() * 0.002;
+                const zOffset = Math.sin(time) * 5;
+                ctx.font = 'bold 16px "Montserrat", sans-serif';
+                ctx.fillStyle = 'rgba(200, 220, 255, 0.8)';
+                ctx.textAlign = 'center';
+                ctx.fillText('Z', cx + 15, py - 10 + zOffset);
+                ctx.fillText('z', cx + 25, py - 25 + zOffset * 0.5);
+                ctx.fillText('z', cx + 35, py - 35 + zOffset * 0.2);
+            }
 
             ctx.fillStyle = 'rgba(255, 100, 150, 0.4)';
             ctx.beginPath(); ctx.arc(px + PHYS.W * 0.2, py + PHYS.H * 0.7, PHYS.W * 0.1, 0, Math.PI * 2); ctx.fill();

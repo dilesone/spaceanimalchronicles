@@ -209,6 +209,18 @@
                 return;
             }
 
+            // Проверка на сон (если не двигается)
+            if (Math.abs(this.vx) < 0.1 && Math.abs(this.vy) < 0.1 && this.onGround) {
+                this.idleTimer++;
+                if (this.idleTimer > 180) { // 3 секунды при 60 FPS
+                    this.isSleeping = true;
+                }
+            } else {
+                this.idleTimer = 0;
+                this.isSleeping = false;
+            }
+            // ════════════════════
+
             if (this.dashCooldown > 0) this.dashCooldown--;
             if (this.invuln > 0) this.invuln--;
 

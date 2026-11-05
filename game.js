@@ -350,18 +350,19 @@
             else nutResItem.classList.remove('complete');
         }
 
-        // --- ЭВАКУАЦИЯ (заполняется до порога открытия) ---
+        // --- ЭВАКУАЦИЯ ---
         const totalNeeded = Level.state.totalBerries + Level.state.totalCrystals;
-        const threshold = totalNeeded / 2; // Порог открытия портала
+        const threshold = totalNeeded / 2; // Порог (половина ресурсов)
         const totalCollected = s.berries + s.crystals;
+        const hasNut = myPlayer ? myPlayer.hasNut : false; // Есть ли у игрока орех
         
-        // Процент заполнения полосы (от 0 до 100)
+        // Процент заполнения полосы (только по ресурсам)
         const percent = threshold > 0 ? Math.min(100, (totalCollected / threshold) * 100) : 100;
         
         if (portalFill) portalFill.style.width = `${percent}%`;
         
-        // Проверяем, открыт ли портал по правилам игры
-        const isOpen = Level.isPortalOpen();
+        // Портал открыт, ТОЛЬКО если ресурсов достаточно И есть орех
+        const isOpen = (percent >= 100) && hasNut;
         
         if (isOpen) {
             if (portalBlock) portalBlock.classList.add('open');

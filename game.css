@@ -415,7 +415,7 @@ canvas#c { display: block; width: 100%; height: 100%; }
 .fullscreen {
     position: fixed; inset: 0; z-index: 200;
     display: flex; align-items: center; justify-content: center;
-    background: rgba(2, 4, 10, 0.6); /* Чуть светлее, чтобы видеть игру */
+    background: rgba(2, 4, 10, 0.6); /* Убрали блюр, фон стал прозрачнее */
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.4s ease;
@@ -429,11 +429,10 @@ canvas#c { display: block; width: 100%; height: 100%; }
     text-align: center;
     max-width: 480px;
     width: 100%;
-    background: rgba(15, 15, 30, 0.85);
+    background: rgba(15, 15, 30, 0.95); /* Плотный фон без блюра */
     border: 1px solid rgba(100, 150, 255, 0.2);
     border-radius: 24px;
     padding: 40px;
-    backdrop-filter: blur(15px);
     box-shadow: 0 20px 50px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.05);
     animation: panelPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
@@ -501,7 +500,7 @@ canvas#c { display: block; width: 100%; height: 100%; }
     margin: 4px 0;
 }
 
-/* Блок награды (как в Трагедии Белок) */
+/* Блок награды */
 .reward-block {
     display: flex;
     flex-direction: column;
@@ -580,6 +579,51 @@ canvas#c { display: block; width: 100%; height: 100%; }
     transition: width 0.5s ease-out;
 }
 
+/* ═══════════════ КНОПКИ (ОБЩИЕ - КАРАКУЛИ) ═══════════════ */
+.menu-btn {
+    position: relative;
+    background: none;
+    border: none;
+    padding: 8px 30px;
+    font-family: 'Caveat', cursive;
+    font-weight: 400;
+    font-size: 28px;
+    color: #c8b8a8;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    text-decoration: none;
+    text-align: center;
+    transition: color 0.3s ease, transform 0.2s, text-shadow 0.3s;
+    text-shadow: 0 2px 5px rgba(0, 0, 0, 0.9), 0 0 15px rgba(0, 0, 0, 0.7);
+    white-space: nowrap;
+    outline: none;
+}
+
+.menu-btn:hover, .menu-btn:focus {
+    color: #fff5e0;
+    outline: none;
+    transform: scale(1.05);
+}
+
+/* Обводка-каракули */
+.menu-btn::before {
+    content: '';
+    position: absolute;
+    inset: -4px -20px;
+    pointer-events: none;
+    opacity: 0;
+    transform: scale(0.85);
+    transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 70' preserveAspectRatio='none'><path d='M 120 8 C 60 4, 10 22, 12 40 C 14 58, 70 68, 120 64 C 180 60, 232 46, 228 30 C 224 14, 170 6, 110 12 C 80 16, 56 22, 50 30' fill='none' stroke='%23c8b8a8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    filter: drop-shadow(0 0 5px rgba(200, 184, 168, 0.5));
+}
+.menu-btn:hover::before, .menu-btn:focus::before {
+    opacity: 1;
+    transform: scale(1);
+}
+
 /* ═══════════════ КНОПКИ ЭКРАНА ПОБЕДЫ ═══════════════ */
 .win-buttons {
     width: 100%;
@@ -611,6 +655,7 @@ canvas#c { display: block; width: 100%; height: 100%; }
     transform: translateY(-2px);
 }
 
+/* Убираем каракули у кнопок победы (так как они квадратные) */
 .win-buttons .menu-btn::before {
     display: none;
 }
@@ -624,16 +669,6 @@ canvas#c { display: block; width: 100%; height: 100%; }
 .win-buttons #btn-solo-next:hover {
     background: rgba(100, 255, 200, 0.25);
     border-color: rgba(100, 255, 200, 0.6);
-}
-
-/* ═══════════════ КНОПКИ (ОБЩИЕ) ═══════════════ */
-.buttons {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1.5vh;
-    width: 100%;
-    margin-top: 2vh;
 }
 
 /* ═══════════════ НАСТРОЙКИ В ПАУЗЕ ═══════════════ */
